@@ -1,0 +1,155 @@
+/* Modern, beautiful booking form styles */
+.booking-container {
+  max-width: 600px;
+  margin: 2.5rem auto 2rem auto;
+  padding: 2.5rem 2rem 2rem 2rem;
+  background: linear-gradient(120deg, #fffbe6 0%, #f8fafc 100%);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(255,107,107,0.10);
+  animation: fadeIn 1.2s cubic-bezier(.4,0,.2,1);
+}
+.booking-container h1 {
+  text-align: center;
+  color: #ff6b6b;
+  margin-bottom: 2rem;
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+.form-group {
+  margin-bottom: 1.5rem;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #ff6b6b;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+.form-group select,
+.form-group input {
+  width: 100%;
+  padding: 0.85rem;
+  border: 1.5px solid #ffd6a0;
+  border-radius: 8px;
+  font-size: 1.05rem;
+  background: #fff;
+  transition: border 0.2s;
+}
+.form-group select:focus,
+.form-group input:focus {
+  outline: none;
+  border-color: #ffb347;
+  box-shadow: 0 0 0 2px #ffb34733;
+}
+button[type="submit"] {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(90deg, #ff6b6b 0%, #ffb347 100%);
+  color: white;
+  border: none;
+  border-radius: 30px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgba(255,107,107,0.10);
+  margin-top: 1.2rem;
+}
+button[type="submit"]:hover {
+  background: linear-gradient(90deg, #ff5252 0%, #ffb347 100%);
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 24px rgba(255,107,107,0.18);
+}
+.form-group select:invalid,
+.form-group input:invalid {
+  border-color: #ff4444;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 768px) {
+  .booking-container {
+    margin: 1rem;
+    padding: 1rem;
+  }
+}
+.booking-container {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.booking-container h1 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 2rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+  font-weight: 500;
+}
+
+.form-group select,
+.form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.form-group select:focus,
+.form-group input:focus {
+  outline: none;
+  border-color: #ff6b6b;
+  box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.1);
+}
+
+button[type="submit"] {
+  width: 100%;
+  padding: 1rem;
+  background-color: #ff6b6b;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button[type="submit"]:hover {
+  background-color: #ff5252;
+}
+
+/* Add some basic validation styles */
+.form-group select:invalid,
+.form-group input:invalid {
+  border-color: #ff4444;
+}
+
+/* Style for disabled dates in the date picker */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 0.2rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .booking-container {
+    margin: 1rem;
+    padding: 1rem;
+  }
+}

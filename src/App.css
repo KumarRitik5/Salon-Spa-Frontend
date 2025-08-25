@@ -1,3 +1,9 @@
+/* Prevent content from being hidden under the fixed header */
+.main-content {
+  padding-top: 70px;
+  min-height: 100vh;
+  background: #f8f9fa;
+}
 .App {
   text-align: center;
 }
