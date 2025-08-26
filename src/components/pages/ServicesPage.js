@@ -24,10 +24,17 @@ const ServicesPage = () => {
   useEffect(() => {
     const fetchServices = async () => {
       try {
+        console.log('Fetching services...'); // Debug log
   const res = await api.get('/api/services');
+        console.log('Services fetched successfully:', res.data); // Debug log
         setServices(res.data);
         setLoading(false);
       } catch (err) {
+        console.error('Failed to load services:', {
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status
+        });
         setError('Failed to load services.');
         setLoading(false);
       }

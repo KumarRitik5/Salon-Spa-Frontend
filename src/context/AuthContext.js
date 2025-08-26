@@ -21,6 +21,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
+      console.log('Attempting login...'); // Debug log
       const response = await api.post('/api/auth/login', {
         email,
         password
@@ -36,25 +37,36 @@ export const AuthProvider = ({ children }) => {
 
       localStorage.setItem('user', JSON.stringify(userToStore));
       setUser(userToStore);
+      console.log('Login successful'); // Debug log
       return userToStore;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       throw error;
     }
   };
 
   const register = async (userData) => {
     try {
+      console.log('Attempting registration...'); // Debug log
       const response = await api.post('/api/auth/register', userData);
       
+      console.log('Registration successful, attempting auto-login...'); // Debug log
       // After successful registration, automatically log in
       return await login(userData.email, userData.password);
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('Registration error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
       }
-      throw error;
+      throw new Error('Registration failed. Please try again.');
     }
   };
 
