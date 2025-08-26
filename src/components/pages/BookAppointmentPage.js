@@ -94,7 +94,7 @@ const BookAppointmentPage = () => {
       setLoadingSlots(false);
     };
     fetchSlots();
-  }, [selectedService, selectedDate]);
+  }, [selectedService, selectedDate, services]);
 
   const handleBooking = async (e) => {
     e.preventDefault();
