@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import api from '../utils/api';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -8,8 +8,11 @@ const Register = () => {
     email: '',
     password: '',
   });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+  const { register } = useAuth();
 
   const { name, email, password } = formData;
 
@@ -18,23 +21,24 @@ const Register = () => {
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
+    
     try {
-      const res = await api.post(
-        '/api/auth/register',
-        formData
-      );
-      console.log(res.data.token);
-      localStorage.setItem('token', res.data.token);
-      navigate('/my-appointments');
+      await register(formData);
+      navigate('/');
     } catch (err) {
-      console.error(err.response.data);
-      alert('Registration failed. Please try again.');
+      console.error('Registration error:', err);
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className='form-container'>
       <h1>Register</h1>
+      {error && <div className="error-message" style={{color: 'red', marginBottom: '1rem'}}>{error}</div>}
       <form onSubmit={onSubmit}>
         <input
           type='text'
@@ -43,6 +47,7 @@ const Register = () => {
           value={name}
           onChange={onChange}
           required
+          disabled={loading}
         />
         <input
           type='email'
@@ -51,6 +56,7 @@ const Register = () => {
           value={email}
           onChange={onChange}
           required
+          disabled={loading}
         />
         <input
           type='password'
@@ -60,8 +66,11 @@ const Register = () => {
           onChange={onChange}
           minLength='6'
           required
+          disabled={loading}
         />
-        <button type='submit'>Register</button>
+        <button type='submit' disabled={loading}>
+          {loading ? 'Registering...' : 'Register'}
+        </button>
       </form>
     </div>
   );

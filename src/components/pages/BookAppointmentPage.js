@@ -17,7 +17,7 @@ const BookAppointmentPage = () => {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const res = await api.get('/services');
+        const res = await api.get('/api/services');
         setServices(res.data);
       } catch (error) {
         console.error('Error fetching services:', error);
@@ -81,7 +81,7 @@ const BookAppointmentPage = () => {
           slotStart = new Date(slotStart.getTime() + duration * 60000);
         }
         // Fetch booked slots for this service and date
-  const res = await api.get(`/appointments?serviceId=${selectedService}&date=${selectedDate}`);
+  const res = await api.get(`/api/appointments?serviceId=${selectedService}&date=${selectedDate}`);
         // Only consider slots as booked if status is not 'completed' or 'cancelled'
         const bookedSlots = res.data.filter(app => app.status !== 'completed' && app.status !== 'cancelled').map(app => app.slot);
         setAvailableSlots(allSlots.map(slotObj => ({
@@ -122,7 +122,7 @@ const BookAppointmentPage = () => {
         createdAt: new Date().toISOString(),
         bookedAt: new Date().toISOString()
       };
-  await api.post('/appointments', newAppointment);
+  await api.post('/api/appointments', newAppointment);
       alert('Appointment request sent! Await confirmation from the owner.');
       navigate('/my-appointments');
     } catch (err) {

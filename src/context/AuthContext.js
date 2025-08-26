@@ -21,20 +21,17 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      // Check user in json-server
-      const response = await api.get(`/users?email=${email}`);
-      const user = response.data[0];
-      
-      if (!user || user.password !== password) {
-        throw new Error('Invalid credentials');
-      }
+      const response = await api.post('/api/auth/login', {
+        email,
+        password
+      });
 
-      // Don't store sensitive data in state or localStorage
+      const { token, user } = response.data;
+      
+      // Store user data with token
       const userToStore = {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role || 'user'
+        ...user,
+        token
       };
 
       localStorage.setItem('user', JSON.stringify(userToStore));
@@ -48,35 +45,15 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      // Check if user already exists
-      const existingUser = await api.get(`/users?email=${userData.email}`);
-      if (existingUser.data.length > 0) {
-        throw new Error('User already exists');
-      }
-
-      // Generate a unique id for the user
-      const generateId = () => Math.random().toString(36).substr(2, 8);
-      const userId = generateId();
-
-      // Create new user (role can be 'user' or 'owner')
-      const response = await api.post('/users', {
-        ...userData,
-        id: userId,
-        createdAt: new Date().toISOString()
-      });
-
-      const newUser = {
-        id: response.data.id || userId,
-        name: response.data.name,
-        email: response.data.email,
-        role: response.data.role || 'user'
-      };
-
-      localStorage.setItem('user', JSON.stringify(newUser));
-      setUser(newUser);
-      return newUser;
+      const response = await api.post('/api/auth/register', userData);
+      
+      // After successful registration, automatically log in
+      return await login(userData.email, userData.password);
     } catch (error) {
       console.error('Registration error:', error);
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
       throw error;
     }
   };
@@ -90,7 +67,7 @@ export const AuthProvider = ({ children }) => {
   const deactivateAccount = async () => {
     if (!user) return;
     try {
-      await api.patch(`/users/${user.id}`, { active: false });
+      await api.patch(`/api/auth/me`, { active: false });
       logout();
       alert('Your account has been deactivated.');
     } catch (err) {
@@ -102,7 +79,7 @@ export const AuthProvider = ({ children }) => {
   const deleteAccount = async () => {
     if (!user) return;
     try {
-      await api.delete(`/users/${user.id}`);
+      await api.delete(`/api/auth/me`);
       logout();
       alert('Your account has been permanently deleted.');
     } catch (err) {

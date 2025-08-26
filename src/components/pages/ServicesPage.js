@@ -24,7 +24,7 @@ const ServicesPage = () => {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-  const res = await api.get('/services');
+  const res = await api.get('/api/services');
         setServices(res.data);
         setLoading(false);
       } catch (err) {

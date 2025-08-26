@@ -27,7 +27,7 @@ const MyAppointmentsPage = () => {
       }
       try {
         // Fetch appointments for this user
-        const res = await api.get(`/appointments?userId=${user.id}`);
+        const res = await api.get(`/api/appointments?userId=${user.id}`);
         setAppointments(res.data);
         setLoading(false);
       } catch (err) {
@@ -64,7 +64,7 @@ const MyAppointmentsPage = () => {
       return;
     }
     try {
-      await api.patch(`/appointments/${activeAppId}`, { status: 'cancelled', cancellationReason: cancelReason });
+      await api.patch(`/api/appointments/${activeAppId}`, { status: 'cancelled', cancellationReason: cancelReason });
       setAppointments((prev) => prev.map(app => app.id === activeAppId ? { ...app, status: 'cancelled', cancellationReason: cancelReason } : app));
       setShowCancelModal(false);
     } catch (err) {
@@ -79,7 +79,7 @@ const MyAppointmentsPage = () => {
       return;
     }
     try {
-      await api.patch(`/appointments/${activeAppId}`, { status: 'completed', feedback: feedbackText, stars: feedbackStars });
+      await api.patch(`/api/appointments/${activeAppId}`, { status: 'completed', feedback: feedbackText, stars: feedbackStars });
       setAppointments((prev) => prev.map(app => app.id === activeAppId ? { ...app, status: 'completed', feedback: feedbackText, stars: feedbackStars } : app));
       setShowFeedbackModal(false);
     } catch (err) {
@@ -263,7 +263,7 @@ const MyAppointmentsPage = () => {
               <button
                 onClick={async () => {
                   try {
-                    await api.patch(`/appointments/${pendingPaymentId}`, { paymentStatus: 'paid' });
+                    await api.patch(`/api/appointments/${pendingPaymentId}`, { paymentStatus: 'paid' });
                     setAppointments((prev) => prev.map(a => a.id === pendingPaymentId ? { ...a, paymentStatus: 'paid' } : a));
                     setShowPaymentModal(false);
                     setPendingPaymentId(null);

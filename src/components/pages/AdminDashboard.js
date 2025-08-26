@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 
 const AdminDashboard = () => {
   const [owners, setOwners] = useState([]);
@@ -8,9 +8,12 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchOwners = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/users?role=owner');
+        // For now, let's just show a placeholder since we don't have a specific owners endpoint
+        // You may need to create this endpoint in your backend or adjust the logic
+        const res = await api.get('/api/auth/users?role=owner');
         setOwners(res.data);
-      } catch {
+      } catch (error) {
+        console.error('Error fetching owners:', error);
         setOwners([]);
       }
       setLoading(false);
