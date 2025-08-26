@@ -9,7 +9,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 second timeout
+  timeout: 30000, // Increased to 30 seconds for Render cold starts
 });
 
 // Add request interceptor to include auth token
@@ -34,13 +34,29 @@ api.interceptors.response.use(
     console.log('API response received:', response.status, response.config.url); // Debug log
     return response;
   },
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
+    
     console.error('API Error:', {
       message: error.message,
       url: error.config?.url,
       status: error.response?.status,
       data: error.response?.data
     });
+    
+    // Retry logic for network errors or 500 errors
+    if (
+      (!error.response || error.response.status >= 500) && 
+      !originalRequest._retry &&
+      originalRequest.method === 'get'
+    ) {
+      originalRequest._retry = true;
+      console.log('Retrying request...');
+      
+      // Wait 2 seconds before retry
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return api(originalRequest);
+    }
     
     if (error.response?.status === 401) {
       // Token expired or invalid, clear user data

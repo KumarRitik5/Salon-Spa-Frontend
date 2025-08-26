@@ -46,9 +46,30 @@ const ServicesPage = () => {
     <div className="services-container">
       <h1>Our Services</h1>
       {loading ? (
-        <div className="loading">Loading services...</div>
+        <div className="loading">
+          <p>Loading services...</p>
+          <p style={{fontSize: '14px', color: '#666', marginTop: '10px'}}>
+            This may take a moment if the server is starting up...
+          </p>
+        </div>
       ) : error ? (
-        <div className="error">{error}</div>
+        <div className="error">
+          <p>{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{
+              marginTop: '10px',
+              padding: '8px 16px',
+              backgroundColor: '#ff6b6b',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Try Again
+          </button>
+        </div>
       ) : (
         <div className="service-list">
           {services.length === 0 ? (
