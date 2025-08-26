@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { FaCreditCard, FaCheckCircle } from 'react-icons/fa';
+import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 
 
@@ -14,6 +15,8 @@ const MyAppointmentsPage = () => {
   const [feedbackText, setFeedbackText] = useState('');
   const [cancelReason, setCancelReason] = useState('');
   const [activeAppId, setActiveAppId] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingPaymentId, setPendingPaymentId] = useState(null);
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -25,7 +28,7 @@ const MyAppointmentsPage = () => {
       }
       try {
         // Fetch appointments for this user
-        const res = await axios.get(`http://localhost:5000/appointments?userId=${user.id}`);
+          const res = await api.get(`/appointments?userId=${user.id}`);
         setAppointments(res.data);
         setLoading(false);
       } catch (err) {
@@ -64,7 +67,7 @@ const MyAppointmentsPage = () => {
       return;
     }
     try {
-      await axios.patch(`http://localhost:5000/appointments/${activeAppId}`, { status: 'cancelled', cancellationReason: cancelReason });
+  await axios.patch(`http://localhost:5000/appointments/${activeAppId}`, { status: 'cancelled', cancellationReason: cancelReason });
       setAppointments((prev) => prev.map(app => app.id === activeAppId ? { ...app, status: 'cancelled', cancellationReason: cancelReason } : app));
       setShowCancelModal(false);
     } catch (err) {
@@ -79,7 +82,7 @@ const MyAppointmentsPage = () => {
       return;
     }
     try {
-      await axios.patch(`http://localhost:5000/appointments/${activeAppId}`, { status: 'completed', feedback: feedbackText, stars: feedbackStars });
+  await axios.patch(`http://localhost:5000/appointments/${activeAppId}`, { status: 'completed', feedback: feedbackText, stars: feedbackStars });
       setAppointments((prev) => prev.map(app => app.id === activeAppId ? { ...app, status: 'completed', feedback: feedbackText, stars: feedbackStars } : app));
       setShowFeedbackModal(false);
     } catch (err) {
@@ -116,15 +119,92 @@ const MyAppointmentsPage = () => {
       </div>
       {appointments.length > 0 ? (
         <ul>
-          {appointments.map((app) => (
+          {[...appointments].reverse().map((app) => (
             <li key={app.id || app._id} style={{ marginBottom: '2rem', border: '1px solid #eee', borderRadius: '10px', padding: '1rem', background: '#fffbe6' }}>
               <p>Service: {app.serviceName || (app.service && app.service.name)}</p>
               <p>Date: {app.date ? new Date(app.date).toLocaleDateString() : ''}</p>
               <p>Slot: {app.slot}</p>
+              {app.bookedAt && (
+                <p><b>Booked At:</b> {new Date(app.bookedAt).toLocaleString()}</p>
+              )}
               <p>Status: <span style={{ color: app.status === 'cancelled' ? '#ff3333' : app.status === 'completed' ? '#00875a' : '#ff6b6b', fontWeight: 600 }}>{app.status}</span></p>
               {app.price && (
                 <p>Price: ₹{app.price}</p>
               )}
+              <p style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <FaCreditCard style={{ color: app.paymentStatus === 'paid' ? '#00875a' : '#ff3333', fontSize: 18 }} />
+                Payment: <span style={{ color: app.paymentStatus === 'paid' ? '#00875a' : '#ff3333', fontWeight: 600, marginLeft: 2 }}>{app.paymentStatus === 'paid' ? 'Paid' : 'Unpaid'}</span>
+                {app.paymentStatus === 'paid' && <FaCheckCircle style={{ color: '#00875a', marginLeft: 4, fontSize: 18 }} />}
+              </p>
+              {/* Pay Now/Pay After Service: professional modal and icons */}
+              {app.paymentStatus !== 'paid' && app.status !== 'cancelled' && (() => {
+                let slotEnd = null;
+                if (app.slot && app.date) {
+                  const slotParts = app.slot.split(' - ');
+                  if (slotParts.length === 2) {
+                    const endStr = slotParts[1];
+                    const parseTime = (t) => {
+                      const [hm, ampm] = t.trim().split(' ');
+                      let [h, m] = hm.split(':').map(Number);
+                      if (ampm === 'PM' && h !== 12) h += 12;
+                      if (ampm === 'AM' && h === 12) h = 0;
+                      return { h, m };
+                    };
+                    const e = parseTime(endStr);
+                    slotEnd = new Date(app.date);
+                    slotEnd.setHours(e.h, e.m, 0, 0);
+                  }
+                }
+                const now = new Date();
+                if (slotEnd && now.getTime() < slotEnd.getTime()) {
+                  // Before service ends: Pay Now
+                  return (
+                    <button
+                      onClick={() => { setPendingPaymentId(app.id); setShowPaymentModal(true); }}
+                      style={{ background: '#1976d2', color: 'white', border: 'none', borderRadius: 6, padding: '0.5rem 1.2rem', fontWeight: 600, cursor: 'pointer', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}
+                    ><FaCreditCard style={{ marginRight: 4 }} /> Pay Now</button>
+                  );
+                } else if (slotEnd && now.getTime() >= slotEnd.getTime() && app.status === 'completed') {
+                  // After service ends and completed: Pay After Service
+                  return (
+                    <button
+                      onClick={() => { setPendingPaymentId(app.id); setShowPaymentModal(true); }}
+                      style={{ background: '#1976d2', color: 'white', border: 'none', borderRadius: 6, padding: '0.5rem 1.2rem', fontWeight: 600, cursor: 'pointer', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}
+                    ><FaCreditCard style={{ marginRight: 4 }} /> Pay After Service</button>
+                  );
+                }
+                return null;
+              })()}
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#0008', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'white', borderRadius: 12, padding: '2rem', minWidth: 320, boxShadow: '0 4px 32px #0002', textAlign: 'center' }}>
+            <FaCreditCard style={{ fontSize: 40, color: '#1976d2', marginBottom: 16 }} />
+            <h2 style={{ color: '#1976d2', marginBottom: 16 }}>Confirm Payment</h2>
+            <p style={{ marginBottom: 24 }}>Are you sure you want to pay for this service?</p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button
+                onClick={async () => {
+                  try {
+                    await axios.patch(`http://localhost:5000/appointments/${pendingPaymentId}`, { paymentStatus: 'paid' });
+                    setAppointments((prev) => prev.map(a => a.id === pendingPaymentId ? { ...a, paymentStatus: 'paid' } : a));
+                    setShowPaymentModal(false);
+                    setPendingPaymentId(null);
+                    alert('Payment successful!');
+                  } catch {
+                    alert('Payment failed.');
+                  }
+                }}
+                style={{ background: '#1976d2', color: 'white', border: 'none', borderRadius: 6, padding: '0.5rem 1.5rem', fontWeight: 600, cursor: 'pointer' }}
+              >Confirm & Pay</button>
+              <button
+                onClick={() => { setShowPaymentModal(false); setPendingPaymentId(null); }}
+                style={{ background: '#eee', color: '#333', border: 'none', borderRadius: 6, padding: '0.5rem 1.5rem', fontWeight: 600, cursor: 'pointer' }}
+              >Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
               {app.status === 'completed' && (app.stars || app.feedback) && (
                 <div style={{ margin: '0.5rem 0' }}>
                   <strong>Feedback:</strong>
@@ -137,14 +217,52 @@ const MyAppointmentsPage = () => {
                 </div>
               )}
               {app.status === 'cancelled' && app.cancellationReason && (
-                <p><strong>Cancellation Reason:</strong> {app.cancellationReason}</p>
+                <>
+                  <p><strong>Cancellation Reason:</strong> {app.cancellationReason}</p>
+                  {app.paymentStatus === 'paid' && app.refundStatus === 'refunded' && (
+                    <p style={{ color: '#00875a', fontWeight: 600 }}><span role="img" aria-label="refund">💸</span> Refund Completed</p>
+                  )}
+                </>
               )}
-              {app.status === 'confirmed' && (
-                <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem' }}>
-                  <button onClick={() => openCancelModal(app.id)} style={{ background: '#ff6b6b', color: 'white', border: 'none', borderRadius: '6px', padding: '0.5rem 1.2rem', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-                  <button onClick={() => openFeedbackModal(app.id)} style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '0.5rem 1.2rem', fontWeight: 600, cursor: 'pointer' }}>Mark as Completed</button>
-                </div>
-              )}
+              {app.status === 'confirmed' && (() => {
+                // Parse slot start and end time
+                const slotParts = app.slot ? app.slot.split(' - ') : [];
+                let slotStart = null, slotEnd = null;
+                if (slotParts.length === 2 && app.date) {
+                  const [startStr, endStr] = slotParts;
+                  const dateStr = app.date;
+                  const parseTime = (t) => {
+                    const [hm, ampm] = t.trim().split(' ');
+                    let [h, m] = hm.split(':').map(Number);
+                    if (ampm === 'PM' && h !== 12) h += 12;
+                    if (ampm === 'AM' && h === 12) h = 0;
+                    return { h, m };
+                  };
+                  const s = parseTime(startStr);
+                  const e = parseTime(endStr);
+                  slotStart = new Date(dateStr);
+                  slotStart.setHours(s.h, s.m, 0, 0);
+                  slotEnd = new Date(dateStr);
+                  slotEnd.setHours(e.h, e.m, 0, 0);
+                }
+                const now = new Date();
+                const canCancel = slotStart && (slotStart.getTime() - now.getTime() > 5 * 60 * 1000);
+                const canComplete = slotEnd && (now.getTime() >= slotEnd.getTime());
+                return (
+                  <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem' }}>
+                    <button
+                      onClick={() => openCancelModal(app.id)}
+                      style={{ background: '#ff6b6b', color: 'white', border: 'none', borderRadius: '6px', padding: '0.5rem 1.2rem', fontWeight: 600, cursor: canCancel ? 'pointer' : 'not-allowed', opacity: canCancel ? 1 : 0.5 }}
+                      disabled={!canCancel}
+                    >Cancel</button>
+                    <button
+                      onClick={() => openFeedbackModal(app.id)}
+                      style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', padding: '0.5rem 1.2rem', fontWeight: 600, cursor: canComplete ? 'pointer' : 'not-allowed', opacity: canComplete ? 1 : 0.5 }}
+                      disabled={!canComplete}
+                    >Mark as Completed</button>
+                  </div>
+                );
+              })()}
             </li>
           ))}
         </ul>

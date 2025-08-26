@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 
 // Create and export the context
 export const AuthContext = createContext(null);
@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       // Check user in json-server
-      const response = await axios.get(`http://localhost:5000/users?email=${email}`);
+      const response = await api.get(`/users?email=${email}`);
       const user = response.data[0];
       
       if (!user || user.password !== password) {
@@ -49,19 +49,24 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       // Check if user already exists
-      const existingUser = await axios.get(`http://localhost:5000/users?email=${userData.email}`);
+      const existingUser = await api.get(`/users?email=${userData.email}`);
       if (existingUser.data.length > 0) {
         throw new Error('User already exists');
       }
 
+      // Generate a unique id for the user
+      const generateId = () => Math.random().toString(36).substr(2, 8);
+      const userId = generateId();
+
       // Create new user (role can be 'user' or 'owner')
-      const response = await axios.post('http://localhost:5000/users', {
+      const response = await api.post('/users', {
         ...userData,
+        id: userId,
         createdAt: new Date().toISOString()
       });
 
       const newUser = {
-        id: response.data.id,
+        id: response.data.id || userId,
         name: response.data.name,
         email: response.data.email,
         role: response.data.role || 'user'
@@ -81,13 +86,11 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-
-
   // Deactivate account function
   const deactivateAccount = async () => {
     if (!user) return;
     try {
-      await axios.patch(`http://localhost:5000/users/${user.id}`, { active: false });
+      await api.patch(`/users/${user.id}`, { active: false });
       logout();
       alert('Your account has been deactivated.');
     } catch (err) {
@@ -99,7 +102,7 @@ export const AuthProvider = ({ children }) => {
   const deleteAccount = async () => {
     if (!user) return;
     try {
-      await axios.delete(`http://localhost:5000/users/${user.id}`);
+      await api.delete(`/users/${user.id}`);
       logout();
       alert('Your account has been permanently deleted.');
     } catch (err) {

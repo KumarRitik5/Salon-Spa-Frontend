@@ -25,6 +25,12 @@ const Register = () => {
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setError('');
+		// Password validation: at least one uppercase, one lowercase, one number
+		const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+		if (!passwordRegex.test(formData.password)) {
+			setError('Password must contain at least one uppercase letter, one lowercase letter, and one number');
+			return;
+		}
 		if (formData.password !== formData.confirmPassword) {
 			setError('Passwords do not match');
 			return;
