@@ -1,5 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState } from 'r    try {
+      await api.post('/services', {
+        ...serviceForm,
+        price: Number(serviceForm.price),
+        duration: Number(serviceForm.duration),
+      });
+      setShowServiceForm(false);
+      setServiceForm({ name: '', price: '', duration: '', description: '' });
+      fetchData();
+    } catch {port api from '../../utils/api';
 // Star icon for feedback
 const Star = ({ filled }) => (
   <span style={{ color: filled ? '#FFD700' : '#ccc', fontSize: '1.2em' }}>★</span>
@@ -24,9 +32,9 @@ const OwnerDashboard = () => {
     setLoading(true);
     try {
       const [appsRes, servRes, usersRes] = await Promise.all([
-  axios.get('http://localhost:5000/appointments'),
-  axios.get('http://localhost:5000/services'),
-  axios.get('http://localhost:5000/users'),
+        api.get('/appointments'),
+        api.get('/services'),
+        api.get('/users'),
       ]);
       setAppointments(appsRes.data);
       setServices(servRes.data);
@@ -44,7 +52,7 @@ const OwnerDashboard = () => {
   const handleAddService = async (e) => {
     e.preventDefault();
     try {
-  await axios.post('http://localhost:5000/services', {
+  await api.post('/services', {
         ...serviceForm,
         price: Number(serviceForm.price),
         duration: Number(serviceForm.duration),
@@ -71,7 +79,7 @@ const OwnerDashboard = () => {
   const handleUpdateService = async (e) => {
     e.preventDefault();
     try {
-  await axios.patch(`http://localhost:5000/services/${editServiceId}`, {
+  await api.patch(`/services/${editServiceId}`, {
         ...serviceForm,
         price: Number(serviceForm.price),
         duration: Number(serviceForm.duration),
@@ -88,7 +96,7 @@ const OwnerDashboard = () => {
   const handleDeleteService = async (id) => {
     if (!window.confirm('Are you sure you want to delete this service?')) return;
     try {
-  await axios.delete(`http://localhost:5000/services/${id}`);
+  await api.delete(`/services/${id}`);
       fetchData();
     } catch {
       alert('Failed to delete service.');
@@ -114,7 +122,7 @@ const OwnerDashboard = () => {
       }
     }
     try {
-      await axios.patch(`http://localhost:5000/appointments/${id}`, data);
+      await api.patch(`/appointments/${id}`, data);
       fetchData();
     } catch {
       alert('Failed to update appointment status.');
