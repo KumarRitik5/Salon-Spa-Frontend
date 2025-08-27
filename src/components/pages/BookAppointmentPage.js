@@ -17,7 +17,7 @@ const BookAppointmentPage = () => {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/services');
+  const res = await axios.get('http://localhost:5000/services');
         setServices(res.data);
       } catch (error) {
         console.error('Error fetching services:', error);
@@ -35,22 +35,61 @@ const BookAppointmentPage = () => {
       }
       setLoadingSlots(true);
       try {
-        // Example slots
-        const allSlots = [
-          '09:00 AM - 10:00 AM',
-          '10:00 AM - 11:00 AM',
-          '11:00 AM - 12:00 PM',
-          '12:00 PM - 01:00 PM',
-          '01:00 PM - 02:00 PM',
-          '02:00 PM - 03:00 PM',
-          '03:00 PM - 04:00 PM',
-          '04:00 PM - 05:00 PM',
-        ];
+        // Determine day of week
+        const dateObj = new Date(selectedDate);
+        const day = dateObj.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+        let openHour, closeHour;
+        if (day === 0) { // Sunday
+          openHour = 10;
+          closeHour = 17;
+        } else if (day === 6) { // Saturday
+          openHour = 9;
+          closeHour = 18;
+        } else { // Mon-Fri
+          openHour = 9;
+          closeHour = 20;
+        }
+        // Get selected service duration in minutes
+        const service = services.find(s => (s.id || s._id).toString() === selectedService.toString());
+        const duration = service && service.duration ? parseInt(service.duration) : 60;
+        // Generate slots based on duration
+        const allSlots = [];
+        const startTime = new Date(dateObj);
+        startTime.setHours(openHour, 0, 0, 0);
+        const endTime = new Date(dateObj);
+        endTime.setHours(closeHour, 0, 0, 0);
+        const format = (d) => {
+          let hour = d.getHours();
+          const ampm = hour >= 12 ? 'PM' : 'AM';
+          hour = hour % 12;
+          if (hour === 0) hour = 12;
+          return `${hour.toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')} ${ampm}`;
+        };
+        let slotStart = new Date(startTime);
+        const now = new Date();
+        while (slotStart.getTime() + duration * 60000 <= endTime.getTime()) {
+          const slotEnd = new Date(slotStart.getTime() + duration * 60000);
+          // For today, only allow slots after the current time
+          let isPast = false;
+          if (selectedDate === now.toISOString().split('T')[0]) {
+            if (slotStart.getTime() <= now.getTime()) {
+              isPast = true;
+            }
+          }
+          allSlots.push({
+            value: `${format(slotStart)} - ${format(slotEnd)}`,
+            isPast
+          });
+          slotStart = new Date(slotStart.getTime() + duration * 60000);
+        }
         // Fetch booked slots for this service and date
-        const res = await axios.get(`http://localhost:5000/appointments?serviceId=${selectedService}&date=${selectedDate}`);
-        const bookedSlots = res.data.map(app => app.slot);
-        const freeSlots = allSlots.filter(slot => !bookedSlots.includes(slot));
-        setAvailableSlots(freeSlots);
+  const res = await axios.get(`http://localhost:5000/appointments?serviceId=${selectedService}&date=${selectedDate}`);
+        // Only consider slots as booked if status is not 'completed' or 'cancelled'
+        const bookedSlots = res.data.filter(app => app.status !== 'completed' && app.status !== 'cancelled').map(app => app.slot);
+        setAvailableSlots(allSlots.map(slotObj => ({
+          value: slotObj.value,
+          disabled: bookedSlots.includes(slotObj.value) || slotObj.isPast
+        })));
       } catch (err) {
         setAvailableSlots([]);
       }
@@ -82,9 +121,10 @@ const BookAppointmentPage = () => {
         date: selectedDate,
         slot: selectedSlot,
         status: 'pending',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        bookedAt: new Date().toISOString()
       };
-      await axios.post('http://localhost:5000/appointments', newAppointment);
+  await axios.post('http://localhost:5000/appointments', newAppointment);
       alert('Appointment request sent! Await confirmation from the owner.');
       navigate('/my-appointments');
     } catch (err) {
@@ -134,8 +174,10 @@ const BookAppointmentPage = () => {
               {availableSlots.length === 0 && selectedDate && selectedService ? (
                 <option value='' disabled>No slots available</option>
               ) : (
-                availableSlots.map((slot) => (
-                  <option key={slot} value={slot}>{slot}</option>
+                availableSlots.map((slotObj) => (
+                  <option key={slotObj.value} value={slotObj.value} disabled={slotObj.disabled} style={slotObj.disabled ? { color: '#aaa', background: '#eee' } : {}}>
+                    {slotObj.value} {slotObj.disabled ? '(Booked)' : ''}
+                  </option>
                 ))
               )}
             </select>

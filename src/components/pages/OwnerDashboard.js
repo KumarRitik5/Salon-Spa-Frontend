@@ -24,9 +24,9 @@ const OwnerDashboard = () => {
     setLoading(true);
     try {
       const [appsRes, servRes, usersRes] = await Promise.all([
-        axios.get('http://localhost:5000/appointments'),
-        axios.get('http://localhost:5000/services'),
-        axios.get('http://localhost:5000/users'),
+  axios.get('http://localhost:5000/appointments'),
+  axios.get('http://localhost:5000/services'),
+  axios.get('http://localhost:5000/users'),
       ]);
       setAppointments(appsRes.data);
       setServices(servRes.data);
@@ -44,7 +44,7 @@ const OwnerDashboard = () => {
   const handleAddService = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/services', {
+  await axios.post('http://localhost:5000/services', {
         ...serviceForm,
         price: Number(serviceForm.price),
         duration: Number(serviceForm.duration),
@@ -71,7 +71,7 @@ const OwnerDashboard = () => {
   const handleUpdateService = async (e) => {
     e.preventDefault();
     try {
-      await axios.patch(`http://localhost:5000/services/${editServiceId}`, {
+  await axios.patch(`http://localhost:5000/services/${editServiceId}`, {
         ...serviceForm,
         price: Number(serviceForm.price),
         duration: Number(serviceForm.duration),
@@ -88,7 +88,7 @@ const OwnerDashboard = () => {
   const handleDeleteService = async (id) => {
     if (!window.confirm('Are you sure you want to delete this service?')) return;
     try {
-      await axios.delete(`http://localhost:5000/services/${id}`);
+  await axios.delete(`http://localhost:5000/services/${id}`);
       fetchData();
     } catch {
       alert('Failed to delete service.');
@@ -97,9 +97,24 @@ const OwnerDashboard = () => {
 
 
   // Owner can confirm or reject (cancel) appointment
+  // Owner can confirm or reject (cancel) appointment, with reason for cancel
   const handleUpdateStatus = async (id, status) => {
+    let data = { status };
+    if (status === 'cancelled') {
+      const reason = window.prompt('Please provide a reason for cancellation:');
+      if (!reason) {
+        alert('Cancellation reason is required.');
+        return;
+      }
+      data.cancellationReason = reason;
+      // If paid, mark refund
+      const app = appointments.find(a => a.id === id || a._id === id);
+      if (app && app.paymentStatus === 'paid') {
+        data.refundStatus = 'refunded';
+      }
+    }
     try {
-      await axios.patch(`http://localhost:5000/appointments/${id}`, { status });
+      await axios.patch(`http://localhost:5000/appointments/${id}`, data);
       fetchData();
     } catch {
       alert('Failed to update appointment status.');
@@ -157,6 +172,8 @@ const OwnerDashboard = () => {
               <th>Date</th>
               <th>Slot</th>
               <th>Status</th>
+              <th>Payment</th>
+              <th>Booked At</th>
               <th>Actions</th>
               <th>Feedback</th>
             </tr>
@@ -165,8 +182,31 @@ const OwnerDashboard = () => {
             {appointments.length === 0 ? (
               <tr><td colSpan={6} style={{ textAlign: 'center', padding: 20 }}>No appointments found.</td></tr>
             ) : (
-              appointments.map((app) => {
+              [...appointments].reverse().map((app) => {
                 const statusColor = app.status === 'cancelled' ? '#ff3333' : app.status === 'completed' ? '#00875a' : app.status === 'confirmed' ? '#1976d2' : '#ffb300';
+                // Parse slot start and end time for time-based button logic
+                let slotStart = null, slotEnd = null;
+                if (app.slot && app.date) {
+                  const slotParts = app.slot.split(' - ');
+                  if (slotParts.length === 2) {
+                    const [startStr, endStr] = slotParts;
+                    const parseTime = (t) => {
+                      const [hm, ampm] = t.trim().split(' ');
+                      let [h, m] = hm.split(':').map(Number);
+                      if (ampm === 'PM' && h !== 12) h += 12;
+                      if (ampm === 'AM' && h === 12) h = 0;
+                      return { h, m };
+                    };
+                    const s = parseTime(startStr);
+                    const e = parseTime(endStr);
+                    slotStart = new Date(app.date);
+                    slotStart.setHours(s.h, s.m, 0, 0);
+                    slotEnd = new Date(app.date);
+                    slotEnd.setHours(e.h, e.m, 0, 0);
+                  }
+                }
+                const now = new Date();
+                const canComplete = slotEnd && (now.getTime() >= slotEnd.getTime());
                 return (
                   <tr key={app.id || app._id}>
                     <td style={{ padding: 8 }}>
@@ -189,8 +229,15 @@ const OwnerDashboard = () => {
                         textTransform: 'capitalize',
                         letterSpacing: 1
                       }}>{app.status}</span>
+                      {app.status === 'cancelled' && app.cancellationReason && (
+                        <div style={{ color: '#ff3333', fontSize: 13, marginTop: 4 }}>
+                          <b>Reason:</b> {app.cancellationReason}
+                        </div>
+                      )}
                     </td>
                     <td>
+                      <span style={{ color: app.paymentStatus === 'paid' ? '#00875a' : '#ff3333', fontWeight: 600 }}>{app.paymentStatus === 'paid' ? 'Paid' : 'Unpaid'}</span>
+                      {app.bookedAt ? new Date(app.bookedAt).toLocaleString() : ''}
                       {app.status === 'pending' && (
                         <>
                           <button
@@ -206,7 +253,8 @@ const OwnerDashboard = () => {
                       {app.status === 'confirmed' && (
                         <button
                           onClick={() => handleUpdateStatus(app.id || app._id, 'completed')}
-                          style={{ background: '#1976d2', color: 'white', border: 'none', borderRadius: 6, padding: '0.4rem 1rem', fontWeight: 600, cursor: 'pointer' }}
+                          style={{ background: '#1976d2', color: 'white', border: 'none', borderRadius: 6, padding: '0.4rem 1rem', fontWeight: 600, cursor: canComplete ? 'pointer' : 'not-allowed', opacity: canComplete ? 1 : 0.5 }}
+                          disabled={!canComplete}
                         >Mark as Completed</button>
                       )}
                     </td>
