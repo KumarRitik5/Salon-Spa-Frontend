@@ -1,6 +1,92 @@
-# Getting Started with Create React App
+# Salon Clinic Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React.js frontend application for the Salon/Clinic Appointment Booking System.
+
+## Features
+
+- User registration and authentication
+- Browse available services
+- Book appointments online
+- View and manage appointments
+- Responsive design for mobile and desktop
+- Role-based access (User, Admin, Owner)
+
+## Tech Stack
+
+- **Frontend**: React.js, React Router
+- **UI**: CSS3, React Icons
+- **HTTP Client**: Axios
+- **State Management**: React Context API
+
+## Local Development
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Create a `.env.local` file:
+   ```
+   REACT_APP_API_URL=http://localhost:5000
+   ```
+
+3. Start the development server:
+   ```bash
+   npm start
+   ```
+
+4. Build for production:
+   ```bash
+   npm run build
+   ```
+
+## Deployment on Vercel
+
+### Prerequisites
+- Vercel account
+- GitHub repository with your frontend code
+- Backend API deployed on Render
+
+### Steps:
+
+1. **Create Vercel Account**: Go to [Vercel](https://vercel.com) and sign up
+
+2. **Import GitHub Repository**: 
+   - Click "New Project"
+   - Import your frontend repository from GitHub
+   - Vercel will auto-detect it's a React app
+
+3. **Configure Environment Variables**:
+   - In your Vercel project dashboard, go to Settings → Environment Variables
+   - Add: `REACT_APP_API_URL` = `https://your-render-backend-url.onrender.com`
+
+4. **Deploy**:
+   - Click "Deploy"
+   - Vercel will automatically build and deploy your app
+
+### Important Notes:
+- The `vercel.json` file is already configured for SPA routing
+- Environment variables are set through Vercel dashboard
+- Automatic deployments happen on every push to your main branch
+
+## Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `REACT_APP_API_URL` | Backend API URL | `https://salon-api.onrender.com` |
+
+## Project Structure
+
+```
+src/
+├── components/          # React components
+│   ├── auth/           # Login/Register components
+│   ├── layout/         # Header/Footer components
+│   └── pages/          # Page components
+├── context/            # React Context (AuthContext)
+├── utils/              # API utilities
+└── App.js              # Main app component
+```
 
 ## Available Scripts
 

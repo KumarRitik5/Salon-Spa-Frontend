@@ -18,10 +18,18 @@ const Login = () => {
 		e.preventDefault();
 		setError('');
 		try {
+			console.log('Login attempt starting...'); // Debug
 			await login(formData.email, formData.password);
 			navigate('/');
 		} catch (err) {
-			setError('Invalid email or password');
+			console.error('Login failed:', err); // Debug
+			let errorMessage = 'Invalid email or password';
+			if (err.message.includes('Network Error') || err.code === 'NETWORK_ERROR') {
+				errorMessage = 'Network error: Cannot connect to server. Please check your internet connection and try again.';
+			} else if (err.response?.data?.message) {
+				errorMessage = err.response.data.message;
+			}
+			setError(errorMessage);
 		}
 	};
 

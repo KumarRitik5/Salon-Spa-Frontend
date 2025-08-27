@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
@@ -21,7 +21,7 @@ const AdminDashboard = () => {
             'x-auth-token': token,
           },
         };
-        const res = await axios.get('http://localhost:5000/api/staff/appointments', config);
+        const res = await api.get('/api/staff/appointments', config);
         setAppointments(res.data);
         setLoading(false);
       } catch (err) {
@@ -44,8 +44,8 @@ const AdminDashboard = () => {
           'x-auth-token': token,
         },
       };
-      await axios.put(
-        `http://localhost:5000/api/staff/appointments/${appointmentId}/status`,
+      await api.put(
+        `/api/staff/appointments/${appointmentId}/status`,
         { status },
         config
       );

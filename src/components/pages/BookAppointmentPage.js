@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../utils/api';
 import { useNavigate } from 'react-router-dom';
 import './BookAppointmentPage.css';
 
@@ -17,16 +17,14 @@ const BookAppointmentPage = () => {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-  const res = await axios.get('http://localhost:5000/services');
+        const res = await api.get('/api/services');
         setServices(res.data);
       } catch (error) {
         console.error('Error fetching services:', error);
       }
     };
     fetchServices();
-  }, []);
-
-  // Fetch available slots when service or date changes
+  }, []);  // Fetch available slots when service or date changes
   useEffect(() => {
     const fetchSlots = async () => {
       if (!selectedService || !selectedDate) {
@@ -83,7 +81,7 @@ const BookAppointmentPage = () => {
           slotStart = new Date(slotStart.getTime() + duration * 60000);
         }
         // Fetch booked slots for this service and date
-  const res = await axios.get(`http://localhost:5000/appointments?serviceId=${selectedService}&date=${selectedDate}`);
+  const res = await api.get(`/api/appointments?serviceId=${selectedService}&date=${selectedDate}`);
         // Only consider slots as booked if status is not 'completed' or 'cancelled'
         const bookedSlots = res.data.filter(app => app.status !== 'completed' && app.status !== 'cancelled').map(app => app.slot);
         setAvailableSlots(allSlots.map(slotObj => ({
@@ -96,7 +94,7 @@ const BookAppointmentPage = () => {
       setLoadingSlots(false);
     };
     fetchSlots();
-  }, [selectedService, selectedDate]);
+  }, [selectedService, selectedDate, services]);
 
   const handleBooking = async (e) => {
     e.preventDefault();
@@ -124,7 +122,7 @@ const BookAppointmentPage = () => {
         createdAt: new Date().toISOString(),
         bookedAt: new Date().toISOString()
       };
-  await axios.post('http://localhost:5000/appointments', newAppointment);
+  await api.post('/api/appointments', newAppointment);
       alert('Appointment request sent! Await confirmation from the owner.');
       navigate('/my-appointments');
     } catch (err) {

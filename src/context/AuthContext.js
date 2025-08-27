@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 
 // Create and export the context
 export const AuthContext = createContext(null);
@@ -21,63 +21,52 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      // Check user in json-server
-  const response = await axios.get(`http://localhost:5000/users?email=${email}`);
-      const user = response.data[0];
-      
-      if (!user || user.password !== password) {
-        throw new Error('Invalid credentials');
-      }
+      console.log('Attempting login...'); // Debug log
+      const response = await api.post('/api/auth/login', {
+        email,
+        password
+      });
 
-      // Don't store sensitive data in state or localStorage
+      const { token, user } = response.data;
+      
+      // Store user data with token
       const userToStore = {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role || 'user'
+        ...user,
+        token
       };
 
       localStorage.setItem('user', JSON.stringify(userToStore));
       setUser(userToStore);
+      console.log('Login successful'); // Debug log
       return userToStore;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       throw error;
     }
   };
 
   const register = async (userData) => {
     try {
-      // Check if user already exists
-  const existingUser = await axios.get(`http://localhost:5000/users?email=${userData.email}`);
-      if (existingUser.data.length > 0) {
-        throw new Error('User already exists');
-      }
-
-      // Generate a unique id for the user
-      const generateId = () => Math.random().toString(36).substr(2, 8);
-      const userId = generateId();
-
-      // Create new user (role can be 'user' or 'owner')
-  const response = await axios.post('http://localhost:5000/users', {
-        ...userData,
-        id: userId,
-        createdAt: new Date().toISOString()
-      });
-
-      const newUser = {
-        id: response.data.id || userId,
-        name: response.data.name,
-        email: response.data.email,
-        role: response.data.role || 'user'
-      };
-
-      localStorage.setItem('user', JSON.stringify(newUser));
-      setUser(newUser);
-      return newUser;
+      console.log('Attempting registration...'); // Debug log
+      const response = await api.post('/api/auth/register', userData);
+      
+      console.log('Registration successful, attempting auto-login...'); // Debug log
+      // After successful registration, automatically log in
+      return await login(userData.email, userData.password);
     } catch (error) {
-      console.error('Registration error:', error);
-      throw error;
+      console.error('Registration error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw new Error('Registration failed. Please try again.');
     }
   };
 
@@ -86,13 +75,11 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-
-
   // Deactivate account function
   const deactivateAccount = async () => {
     if (!user) return;
     try {
-  await axios.patch(`http://localhost:5000/users/${user.id}`, { active: false });
+      await api.patch(`/api/auth/me`, { active: false });
       logout();
       alert('Your account has been deactivated.');
     } catch (err) {
@@ -104,7 +91,7 @@ export const AuthProvider = ({ children }) => {
   const deleteAccount = async () => {
     if (!user) return;
     try {
-  await axios.delete(`http://localhost:5000/users/${user.id}`);
+      await api.delete(`/api/auth/me`);
       logout();
       alert('Your account has been permanently deleted.');
     } catch (err) {

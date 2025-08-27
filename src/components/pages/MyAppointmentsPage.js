@@ -1,22 +1,21 @@
-
 import React, { useState, useEffect } from 'react';
 import { FaCreditCard, FaCheckCircle } from 'react-icons/fa';
-import axios from 'axios';
+import api from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
-
+import './MyAppointmentsPage.css';
 
 const MyAppointmentsPage = () => {
   const { deactivateAccount } = useAuth();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [feedbackStars, setFeedbackStars] = useState(0);
-  const [feedbackText, setFeedbackText] = useState('');
-  const [cancelReason, setCancelReason] = useState('');
-  const [activeAppId, setActiveAppId] = useState(null);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [activeAppId, setActiveAppId] = useState(null);
   const [pendingPaymentId, setPendingPaymentId] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackStars, setFeedbackStars] = useState(0);
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -28,7 +27,7 @@ const MyAppointmentsPage = () => {
       }
       try {
         // Fetch appointments for this user
-  const res = await axios.get(`http://localhost:5000/appointments?userId=${user.id}`);
+        const res = await api.get(`/api/appointments?userId=${user.id}`);
         setAppointments(res.data);
         setLoading(false);
       } catch (err) {
@@ -42,8 +41,6 @@ const MyAppointmentsPage = () => {
   if (loading) {
     return <div>Loading...</div>;
   }
-
-
 
   // Open cancel modal
   const openCancelModal = (id) => {
@@ -67,7 +64,7 @@ const MyAppointmentsPage = () => {
       return;
     }
     try {
-  await axios.patch(`http://localhost:5000/appointments/${activeAppId}`, { status: 'cancelled', cancellationReason: cancelReason });
+      await api.patch(`/api/appointments/${activeAppId}`, { status: 'cancelled', cancellationReason: cancelReason });
       setAppointments((prev) => prev.map(app => app.id === activeAppId ? { ...app, status: 'cancelled', cancellationReason: cancelReason } : app));
       setShowCancelModal(false);
     } catch (err) {
@@ -82,7 +79,7 @@ const MyAppointmentsPage = () => {
       return;
     }
     try {
-  await axios.patch(`http://localhost:5000/appointments/${activeAppId}`, { status: 'completed', feedback: feedbackText, stars: feedbackStars });
+      await api.patch(`/api/appointments/${activeAppId}`, { status: 'completed', feedback: feedbackText, stars: feedbackStars });
       setAppointments((prev) => prev.map(app => app.id === activeAppId ? { ...app, status: 'completed', feedback: feedbackText, stars: feedbackStars } : app));
       setShowFeedbackModal(false);
     } catch (err) {
@@ -90,10 +87,8 @@ const MyAppointmentsPage = () => {
     }
   };
 
-
-
   return (
-    <div>
+    <div className='appointments-page'>
       <h1>My Appointments</h1>
       <div style={{ textAlign: 'right', marginBottom: '1.5rem' }}>
         <button
@@ -267,52 +262,196 @@ const MyAppointmentsPage = () => {
           ))}
         </ul>
       ) : (
-        <p>You have no appointments booked yet.</p>
+        <div className='appointments-grid'>
+          {appointments.map((appointment) => (
+            <div key={appointment.id || appointment._id} className='appointment-card'>
+              <h3>{appointment.serviceName || 'Service'}</h3>
+              <div className='appointment-details'>
+                <p><strong>Date:</strong> {appointment.date}</p>
+                <p><strong>Time:</strong> {appointment.slot}</p>
+                <p><strong>Status:</strong> <span className={`status status-${appointment.status}`}>{appointment.status}</span></p>
+                {appointment.cancellationReason && (
+                  <p><strong>Cancellation Reason:</strong> {appointment.cancellationReason}</p>
+                )}
+                {appointment.feedback && (
+                  <div>
+                    <p><strong>Feedback:</strong> {appointment.feedback}</p>
+                    <p><strong>Rating:</strong> {'★'.repeat(appointment.stars || 0)}</p>
+                  </div>
+                )}
+                {appointment.paymentStatus && (
+                  <p><strong>Payment:</strong> <span className={`status status-${appointment.paymentStatus}`}>{appointment.paymentStatus}</span></p>
+                )}
+              </div>
+
+              {/* Action buttons based on status */}
+              {appointment.status === 'confirmed' && (
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button 
+                    className='cancel-button' 
+                    onClick={() => openCancelModal(appointment.id || appointment._id)}
+                    style={{ background: '#ff3333' }}
+                  >
+                    Cancel Appointment
+                  </button>
+                  <button 
+                    className='cancel-button' 
+                    onClick={() => openFeedbackModal(appointment.id || appointment._id)}
+                    style={{ background: '#4CAF50' }}
+                  >
+                    Mark as Completed
+                  </button>
+                </div>
+              )}
+
+              {appointment.status === 'completed' && appointment.paymentStatus === 'pending' && (
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button 
+                    className='cancel-button' 
+                    onClick={() => {
+                      setPendingPaymentId(appointment.id || appointment._id);
+                      setShowPaymentModal(true);
+                    }}
+                    style={{ background: '#FF9800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                  >
+                    <FaCreditCard /> Pay Now
+                  </button>
+                </div>
+              )}
+
+              {appointment.status === 'completed' && appointment.paymentStatus === 'paid' && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.75rem', background: '#e8f5e8', borderRadius: '8px', color: '#2e7d32' }}>
+                  <FaCheckCircle style={{ marginRight: '0.5rem' }} />
+                  Completed & Paid
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       )}
+
+      {/* Account Management Section */}
+      <div style={{ marginTop: '3rem', padding: '2rem', background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <h2 style={{ color: '#ff6b6b', marginBottom: '1.5rem' }}>Account Management</h2>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <button 
+            onClick={deactivateAccount}
+            style={{ 
+              padding: '0.75rem 1.5rem', 
+              background: '#ff9800', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '6px', 
+              cursor: 'pointer',
+              fontWeight: '600'
+            }}
+          >
+            Deactivate Account
+          </button>
+        </div>
+      </div>
+
+      {/* Cancellation Modal */}
+      {showCancelModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'white', borderRadius: '12px', padding: '2rem', minWidth: '320px', boxShadow: '0 4px 32px rgba(0,0,0,0.2)', textAlign: 'center' }}>
+            <h2 style={{ color: '#ff6b6b', marginBottom: '1rem' }}>Cancel Appointment</h2>
+            <textarea
+              rows={4}
+              style={{ width: '100%', borderRadius: '6px', border: '1px solid #ddd', padding: '8px', marginBottom: '1rem' }}
+              placeholder="Please provide a reason for cancellation..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+            />
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button
+                onClick={() => setShowCancelModal(false)}
+                style={{ flex: 1, padding: '0.75rem', background: '#ccc', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Close
+              </button>
+              <button
+                onClick={submitCancel}
+                style={{ flex: 1, padding: '0.75rem', background: '#ff3333', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+              >
+                Confirm Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Feedback Modal */}
       {showFeedbackModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#0008', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'white', borderRadius: 12, padding: '2rem', minWidth: 320, boxShadow: '0 4px 32px #0002', textAlign: 'center' }}>
-            <h2 style={{ color: '#4CAF50', marginBottom: 16 }}>Rate Your Experience</h2>
-            <div style={{ marginBottom: 16 }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'white', borderRadius: '12px', padding: '2rem', minWidth: '320px', boxShadow: '0 4px 32px rgba(0,0,0,0.2)', textAlign: 'center' }}>
+            <h2 style={{ color: '#4CAF50', marginBottom: '1rem' }}>Rate Your Experience</h2>
+            <div style={{ marginBottom: '1rem' }}>
               {[1,2,3,4,5].map((star) => (
                 <span
                   key={star}
-                  style={{ fontSize: '2em', color: feedbackStars >= star ? '#FFD700' : '#ccc', cursor: 'pointer', marginRight: 4 }}
+                  style={{ fontSize: '2em', color: feedbackStars >= star ? '#FFD700' : '#ccc', cursor: 'pointer', marginRight: '4px' }}
                   onClick={() => setFeedbackStars(star)}
                 >★</span>
               ))}
             </div>
             <textarea
               rows={4}
-              style={{ width: '100%', borderRadius: 6, border: '1px solid #ddd', padding: 8, marginBottom: 16 }}
+              style={{ width: '100%', borderRadius: '6px', border: '1px solid #ddd', padding: '8px', marginBottom: '1rem' }}
               placeholder="Write your feedback..."
               value={feedbackText}
-              onChange={e => setFeedbackText(e.target.value)}
+              onChange={(e) => setFeedbackText(e.target.value)}
             />
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-              <button onClick={submitFeedback} style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: 6, padding: '0.5rem 1.5rem', fontWeight: 600, cursor: 'pointer' }}>Submit</button>
-              <button onClick={() => setShowFeedbackModal(false)} style={{ background: '#eee', color: '#333', border: 'none', borderRadius: 6, padding: '0.5rem 1.5rem', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button
+                onClick={() => setShowFeedbackModal(false)}
+                style={{ flex: 1, padding: '0.75rem', background: '#ccc', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Close
+              </button>
+              <button
+                onClick={submitFeedback}
+                style={{ flex: 1, padding: '0.75rem', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+              >
+                Submit Feedback
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Cancel Modal */}
-      {showCancelModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#0008', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'white', borderRadius: 12, padding: '2rem', minWidth: 320, boxShadow: '0 4px 32px #0002', textAlign: 'center' }}>
-            <h2 style={{ color: '#ff3333', marginBottom: 16 }}>Cancel Appointment</h2>
-            <textarea
-              rows={3}
-              style={{ width: '100%', borderRadius: 6, border: '1px solid #ddd', padding: 8, marginBottom: 16 }}
-              placeholder="Please provide a reason for cancellation..."
-              value={cancelReason}
-              onChange={e => setCancelReason(e.target.value)}
-            />
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-              <button onClick={submitCancel} style={{ background: '#ff3333', color: 'white', border: 'none', borderRadius: 6, padding: '0.5rem 1.5rem', fontWeight: 600, cursor: 'pointer' }}>Submit</button>
-              <button onClick={() => setShowCancelModal(false)} style={{ background: '#eee', color: '#333', border: 'none', borderRadius: 6, padding: '0.5rem 1.5rem', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'white', borderRadius: '12px', padding: '2rem', minWidth: '320px', boxShadow: '0 4px 32px rgba(0,0,0,0.2)', textAlign: 'center' }}>
+            <h2 style={{ color: '#FF9800', marginBottom: '1rem' }}>Payment Required</h2>
+            <p style={{ marginBottom: '1.5rem', color: '#666' }}>Please complete your payment for this appointment.</p>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <button
+                onClick={async () => {
+                  try {
+                    await api.patch(`/api/appointments/${pendingPaymentId}`, { paymentStatus: 'paid' });
+                    setAppointments((prev) => prev.map(a => a.id === pendingPaymentId ? { ...a, paymentStatus: 'paid' } : a));
+                    setShowPaymentModal(false);
+                    setPendingPaymentId(null);
+                    alert('Payment successful!');
+                  } catch {
+                    alert('Payment failed.');
+                  }
+                }}
+                style={{ padding: '0.75rem 1.5rem', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <FaCreditCard /> Confirm Payment
+              </button>
+              <button
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setPendingPaymentId(null);
+                }}
+                style={{ padding: '0.75rem 1.5rem', background: '#ccc', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
