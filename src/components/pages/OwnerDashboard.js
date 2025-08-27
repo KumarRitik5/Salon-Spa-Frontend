@@ -145,7 +145,6 @@ const OwnerDashboard = () => {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, marginTop: 10 }}>
           {services.map(service => {
             const avg = getServiceRating(service.id || service._id);
-            const feedbacks = getServiceFeedbacks(service.id || service._id);
             return (
               <div key={service.id || service._id} style={{ background: '#fff', borderRadius: 8, boxShadow: '0 1px 4px #ffecb322', padding: 12, minWidth: 180 }}>
                 <div style={{ fontWeight: 600 }}>{service.name}</div>
@@ -268,6 +267,11 @@ const OwnerDashboard = () => {
                     </td>
                   </tr>
                 );
+              })}
+            </tbody>
+          </table>
+        </div>
+
       {/* Feedback Modal for Service */}
       {showFeedbackModal && feedbackService && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#0008', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

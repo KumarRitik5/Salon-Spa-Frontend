@@ -52,7 +52,7 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       console.log('Attempting registration...'); // Debug log
-      const response = await api.post('/api/auth/register', userData);
+      await api.post('/api/auth/register', userData);
       
       console.log('Registration successful, attempting auto-login...'); // Debug log
       // After successful registration, automatically log in
