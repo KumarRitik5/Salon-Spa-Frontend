@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import api, { API_BASE_URL } from '../../utils/api';
+import api, { API_BASE_URL } from '../utils/api';
 
 const ConnectionTest = () => {
   const [testResult, setTestResult] = useState('');
