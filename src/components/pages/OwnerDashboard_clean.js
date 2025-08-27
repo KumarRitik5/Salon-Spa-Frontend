@@ -1,0 +1,313 @@
+import React, { useEffect, useState } from 'react';
+import api from '../../utils/api';
+
+// Star icon for feedback
+const Star = ({ filled }) => (
+  <span style={{ color: filled ? '#FFD700' : '#ccc', fontSize: '1.2em' }}>★</span>
+);
+
+const OwnerDashboard = () => {
+  const [appointments, setAppointments] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showServiceForm, setShowServiceForm] = useState(false);
+  const [serviceForm, setServiceForm] = useState({ name: '', price: '', duration: '', description: '' });
+  const [editServiceId, setEditServiceId] = useState(null);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackService, setFeedbackService] = useState(null);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [appsRes, servRes, usersRes] = await Promise.all([
+        api.get('/appointments'),
+        api.get('/services'),
+        api.get('/users'),
+      ]);
+      setAppointments(appsRes.data);
+      setServices(servRes.data);
+      setUsers(usersRes.data);
+    } catch (err) {
+      alert('Failed to load data.');
+    }
+    setLoading(false);
+  };
+
+  const handleServiceFormChange = (e) => {
+    setServiceForm({ ...serviceForm, [e.target.name]: e.target.value });
+  };
+
+  const handleAddService = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post('/services', {
+        ...serviceForm,
+        price: Number(serviceForm.price),
+        duration: Number(serviceForm.duration),
+      });
+      setShowServiceForm(false);
+      setServiceForm({ name: '', price: '', duration: '', description: '' });
+      fetchData();
+    } catch {
+      alert('Failed to add service.');
+    }
+  };
+
+  const handleEditService = (service) => {
+    setEditServiceId(service.id || service._id);
+    setServiceForm({
+      name: service.name,
+      price: service.price,
+      duration: service.duration,
+      description: service.description || '',
+    });
+    setShowServiceForm(true);
+  };
+
+  const handleUpdateService = async (e) => {
+    e.preventDefault();
+    try {
+      await api.patch(`/services/${editServiceId}`, {
+        ...serviceForm,
+        price: Number(serviceForm.price),
+        duration: Number(serviceForm.duration),
+      });
+      setEditServiceId(null);
+      setShowServiceForm(false);
+      setServiceForm({ name: '', price: '', duration: '', description: '' });
+      fetchData();
+    } catch {
+      alert('Failed to update service.');
+    }
+  };
+
+  const handleDeleteService = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this service?')) return;
+    try {
+      await api.delete(`/services/${id}`);
+      fetchData();
+    } catch {
+      alert('Failed to delete service.');
+    }
+  };
+
+  const handleUpdateStatus = async (id, status) => {
+    let data = { status };
+    if (status === 'cancelled') {
+      const reason = window.prompt('Please provide a reason for cancellation:');
+      if (!reason) {
+        alert('Cancellation reason is required.');
+        return;
+      }
+      data.cancellationReason = reason;
+      const app = appointments.find(a => a.id === id || a._id === id);
+      if (app && app.paymentStatus === 'paid') {
+        data.refundStatus = 'refunded';
+      }
+    }
+    try {
+      await api.patch(`/appointments/${id}`, data);
+      fetchData();
+    } catch {
+      alert('Failed to update appointment status.');
+    }
+  };
+
+  const getServiceRating = (serviceId) => {
+    const serviceApps = appointments.filter(app => app.serviceId === serviceId && app.stars);
+    if (serviceApps.length === 0) return null;
+    const avg = serviceApps.reduce((sum, app) => sum + (app.stars || 0), 0) / serviceApps.length;
+    return avg.toFixed(1);
+  };
+
+  const getServiceFeedbacks = (serviceId) => {
+    return appointments.filter(app => app.serviceId === serviceId && app.feedback);
+  };
+
+  if (loading) return <div style={{ textAlign: 'center', padding: '2rem' }}>Loading...</div>;
+
+  return (
+    <div style={{ maxWidth: 1100, margin: '2rem auto', padding: '2rem', background: '#fffbe6', borderRadius: 16, boxShadow: '0 2px 16px #ffecb366' }}>
+      <h2 style={{ textAlign: 'center', color: '#ff6b6b', marginBottom: 32 }}>Owner Dashboard</h2>
+      <h3 style={{ color: '#333', marginBottom: 16 }}>All Appointments</h3>
+      <div style={{ marginBottom: 24, background: '#f7f7f7', borderRadius: 8, padding: 16, boxShadow: '0 1px 6px #ffecb322' }}>
+        <h4 style={{ margin: 0, color: '#ff6b6b' }}>Service Ratings & Feedback</h4>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, marginTop: 10 }}>
+          {services.map(service => {
+            const avg = getServiceRating(service.id || service._id);
+            return (
+              <div key={service.id || service._id} style={{ background: '#fff', borderRadius: 8, boxShadow: '0 1px 4px #ffecb322', padding: 12, minWidth: 180 }}>
+                <div style={{ fontWeight: 600 }}>{service.name}</div>
+                <div style={{ margin: '4px 0' }}>
+                  <span style={{ fontWeight: 500 }}>Avg Rating: </span>
+                  {avg ? (
+                    <span style={{ color: '#FFD700', fontWeight: 700 }}>{avg} / 5</span>
+                  ) : (
+                    <span style={{ color: '#aaa' }}>No ratings</span>
+                  )}
+                </div>
+                <button onClick={() => { setFeedbackService(service); setShowFeedbackModal(true); }} style={{ background: '#1976d2', color: 'white', border: 'none', borderRadius: 6, padding: '0.3rem 0.8rem', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>View Feedbacks</button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div style={{ overflowX: 'auto', marginBottom: 32 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: 8 }}>
+          <thead>
+            <tr style={{ background: '#ffe5e5' }}>
+              <th style={{ padding: 10 }}>Customer</th>
+              <th>Service</th>
+              <th>Date & Time</th>
+              <th>Status</th>
+              <th>Payment</th>
+              <th>Booked At</th>
+              <th>Actions</th>
+              <th>Feedback</th>
+            </tr>
+          </thead>
+          <tbody>
+            {appointments.length === 0 ? (
+              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 20 }}>No appointments found.</td></tr>
+            ) : (
+              [...appointments].reverse().map((app) => {
+                const statusColor = app.status === 'cancelled' ? '#ff3333' : app.status === 'completed' ? '#00875a' : app.status === 'confirmed' ? '#1976d2' : '#ffb300';
+                const user = users.find(u => u.id === app.userId || u._id === app.userId);
+                const service = services.find(s => s.id === app.serviceId || s._id === app.serviceId);
+                const canComplete = app.status === 'confirmed' && new Date(app.date + 'T' + app.time) <= new Date();
+                
+                return (
+                  <tr key={app.id || app._id} style={{ borderBottom: '1px solid #eee' }}>
+                    <td style={{ padding: 10 }}>{user ? user.name : 'Unknown'}</td>
+                    <td>{service ? service.name : 'Unknown Service'}</td>
+                    <td>{new Date(app.date + 'T' + app.time).toLocaleString()}</td>
+                    <td>
+                      <span style={{ color: statusColor, fontWeight: 600 }}>{app.status}</span>
+                      {app.cancellationReason && (
+                        <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Reason: {app.cancellationReason}</div>
+                      )}
+                    </td>
+                    <td style={{ color: app.paymentStatus === 'paid' ? '#00875a' : '#ffb300', fontWeight: 600 }}>
+                      {app.paymentStatus || 'pending'}
+                      {app.refundStatus && (
+                        <div style={{ fontSize: 12, color: '#ff6b6b' }}>({app.refundStatus})</div>
+                      )}
+                    </td>
+                    <td>{new Date(app.createdAt).toLocaleDateString()}</td>
+                    <td>
+                      {app.status === 'pending' && (
+                        <>
+                          <button onClick={() => handleUpdateStatus(app.id || app._id, 'confirmed')} style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: 6, padding: '0.3rem 0.8rem', marginRight: 6, fontWeight: 600, cursor: 'pointer' }}>Confirm</button>
+                          <button onClick={() => handleUpdateStatus(app.id || app._id, 'cancelled')} style={{ background: '#ff3333', color: 'white', border: 'none', borderRadius: 6, padding: '0.3rem 0.8rem', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                        </>
+                      )}
+                      {canComplete && (
+                        <button 
+                          onClick={() => handleUpdateStatus(app.id || app._id, 'completed')}
+                          style={{ background: '#1976d2', color: 'white', border: 'none', borderRadius: 6, padding: '0.4rem 1rem', fontWeight: 600, cursor: canComplete ? 'pointer' : 'not-allowed', opacity: canComplete ? 1 : 0.5 }}
+                          disabled={!canComplete}
+                        >Mark as Completed</button>
+                      )}
+                    </td>
+                    <td>
+                      {app.stars && (
+                        <span>{[...Array(5)].map((_, i) => <Star key={i} filled={i < app.stars} />)}</span>
+                      )}
+                      {app.feedback && (
+                        <div style={{ fontSize: 13, color: '#555', marginTop: 2 }}>{app.feedback}</div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Feedback Modal for Service */}
+      {showFeedbackModal && feedbackService && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#0008', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'white', borderRadius: 12, padding: '2rem', minWidth: 320, maxWidth: 500, boxShadow: '0 4px 32px #0002', textAlign: 'center' }}>
+            <h2 style={{ color: '#ff6b6b', marginBottom: 16 }}>Feedback for {feedbackService.name}</h2>
+            <div style={{ maxHeight: 300, overflowY: 'auto', marginBottom: 16 }}>
+              {getServiceFeedbacks(feedbackService.id || feedbackService._id).map((app, index) => {
+                const user = users.find(u => u.id === app.userId || u._id === app.userId);
+                return (
+                  <div key={index} style={{ border: '1px solid #eee', borderRadius: 8, padding: 12, marginBottom: 8, textAlign: 'left' }}>
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>{user ? user.name : 'Anonymous'}</div>
+                    <div style={{ marginBottom: 4 }}>
+                      {[...Array(5)].map((_, i) => <Star key={i} filled={i < app.stars} />)}
+                    </div>
+                    <div style={{ fontSize: 14, color: '#555' }}>{app.feedback}</div>
+                    <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+                      {new Date(app.date + 'T' + app.time).toLocaleDateString()}
+                    </div>
+                  </div>
+                );
+              })}
+              {getServiceFeedbacks(feedbackService.id || feedbackService._id).length === 0 && (
+                <div style={{ color: '#999' }}>No feedback yet for this service.</div>
+              )}
+            </div>
+            <button onClick={() => setShowFeedbackModal(false)} style={{ background: '#1976d2', color: 'white', border: 'none', borderRadius: 6, padding: '0.5rem 1.5rem', fontWeight: 600, cursor: 'pointer' }}>Close</button>
+          </div>
+        </div>
+      )}
+
+      <h3 style={{ color: '#333', marginBottom: 16 }}>Manage Services</h3>
+      <button onClick={() => { setShowServiceForm(true); setEditServiceId(null); setServiceForm({ name: '', price: '', duration: '', description: '' }); }} style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: 6, padding: '0.5rem 1.2rem', fontWeight: 600, cursor: 'pointer', marginBottom: 16 }}>Add New Service</button>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: 8 }}>
+          <thead>
+            <tr style={{ background: '#ffe5e5' }}>
+              <th style={{ padding: 10 }}>Service</th>
+              <th>Price</th>
+              <th>Duration</th>
+              <th>Description</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {services.map(service => (
+              <tr key={service.id || service._id} style={{ borderBottom: '1px solid #eee' }}>
+                <td style={{ padding: 10, fontWeight: 600 }}>{service.name}</td>
+                <td>${service.price}</td>
+                <td>{service.duration} min</td>
+                <td>{service.description || 'No description'}</td>
+                <td>
+                  <button onClick={() => handleEditService(service)} style={{ background: '#1976d2', color: 'white', border: 'none', borderRadius: 6, padding: '0.3rem 0.8rem', marginRight: 6, fontWeight: 600, cursor: 'pointer' }}>Edit</button>
+                  <button onClick={() => handleDeleteService(service.id || service._id)} style={{ background: '#ff3333', color: 'white', border: 'none', borderRadius: 6, padding: '0.3rem 0.8rem', fontWeight: 600, cursor: 'pointer' }}>Delete</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Service Form Modal */}
+      {showServiceForm && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#0008', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <form onSubmit={editServiceId ? handleUpdateService : handleAddService} style={{ background: 'white', borderRadius: 12, padding: '2rem', minWidth: 320, boxShadow: '0 4px 32px #0002', textAlign: 'center' }}>
+            <h2 style={{ color: '#ff6b6b', marginBottom: 16 }}>{editServiceId ? 'Edit Service' : 'Add New Service'}</h2>
+            <input name="name" value={serviceForm.name} onChange={handleServiceFormChange} placeholder="Service Name" required style={{ width: '100%', marginBottom: 12, padding: 8, borderRadius: 6, border: '1px solid #ddd' }} />
+            <input name="price" value={serviceForm.price} onChange={handleServiceFormChange} placeholder="Price" type="number" min="0" required style={{ width: '100%', marginBottom: 12, padding: 8, borderRadius: 6, border: '1px solid #ddd' }} />
+            <input name="duration" value={serviceForm.duration} onChange={handleServiceFormChange} placeholder="Duration (min)" type="number" min="1" required style={{ width: '100%', marginBottom: 12, padding: 8, borderRadius: 6, border: '1px solid #ddd' }} />
+            <textarea name="description" value={serviceForm.description} onChange={handleServiceFormChange} placeholder="Description" rows={3} style={{ width: '100%', marginBottom: 16, padding: 8, borderRadius: 6, border: '1px solid #ddd' }} />
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+              <button type="submit" style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: 6, padding: '0.5rem 1.5rem', fontWeight: 600, cursor: 'pointer' }}>{editServiceId ? 'Update' : 'Add'}</button>
+              <button type="button" onClick={() => { setShowServiceForm(false); setEditServiceId(null); }} style={{ background: '#eee', color: '#333', border: 'none', borderRadius: 6, padding: '0.5rem 1.5rem', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default OwnerDashboard;

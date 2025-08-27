@@ -14,10 +14,11 @@ import AdminDashboard from './components/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
-import ConnectionTest from './components/ConnectionTest';
 import './App.css';
 
 function App() {
+  console.log('App component rendering...'); // Debug log
+  
   return (
     <AuthProvider>
       <Router>
@@ -56,8 +57,6 @@ function App() {
             </Routes>
           </main>
           <Footer />
-          {/* Connection Test Component for debugging */}
-          <ConnectionTest />
         </div>
       </Router>
     </AuthProvider>
