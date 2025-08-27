@@ -181,7 +181,7 @@ const MyAppointmentsPage = () => {
               <button
                 onClick={async () => {
                   try {
-                    await axios.patch(`http://localhost:5000/appointments/${pendingPaymentId}`, { paymentStatus: 'paid' });
+                    await api.patch(`/appointments/${pendingPaymentId}`, { paymentStatus: 'paid' });
                     setAppointments((prev) => prev.map(a => a.id === pendingPaymentId ? { ...a, paymentStatus: 'paid' } : a));
                     setShowPaymentModal(false);
                     setPendingPaymentId(null);
