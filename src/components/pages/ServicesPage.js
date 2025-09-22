@@ -69,7 +69,7 @@ const ServicesPage = () => {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/services');
+        const res = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/services`);
         setServices(res.data);
         setLoading(false);
       } catch (err) {
