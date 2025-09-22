@@ -34,7 +34,7 @@ const OwnerCustomization = () => {
 
   const fetchConfig = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/homePageConfig');
+      const res = await axios.get(${process.env.REACT_APP_API_URL || ${process.env.REACT_APP_API_URL || 'http://localhost:5000'}'}/homePageConfig');
       console.log('Fetched config:', res.data);
       setConfig(res.data);
     } catch (error) {
@@ -125,7 +125,7 @@ const OwnerCustomization = () => {
       console.log('Saving config:', updatedConfig);
       
       // Use PUT to update the entire homePageConfig object
-      await axios.put('http://localhost:5000/homePageConfig', updatedConfig);
+      await axios.put(${process.env.REACT_APP_API_URL || ${process.env.REACT_APP_API_URL || 'http://localhost:5000'}'}/homePageConfig', updatedConfig);
       
       setConfig(updatedConfig);
       alert('Configuration saved successfully!');

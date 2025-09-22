@@ -31,7 +31,7 @@ const HomePage = () => {
 
   const fetchConfig = async () => {
     try {
-      const res = await axios.get('http://localhost:5000/homePageConfig');
+      const res = await axios.get(${process.env.REACT_APP_API_URL || ${process.env.REACT_APP_API_URL || 'http://localhost:5000'}'}/homePageConfig');
       console.log('HomePage - Fetched config:', res.data);
       setConfig(res.data);
     } catch (error) {

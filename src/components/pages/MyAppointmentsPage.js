@@ -29,7 +29,7 @@ const MyAppointmentsPage = () => {
       try {
         // Fetch all appointments first, then filter on client side
         // This is needed because JSON Server doesn't have proper user auth
-        const res = await axios.get('http://localhost:5000/appointments');
+        const res = await axios.get(${process.env.REACT_APP_API_URL || ${process.env.REACT_APP_API_URL || 'http://localhost:5000'}'}/appointments');
         
         // Filter appointments for this specific user
         const userAppointments = res.data.filter(app => 
@@ -79,7 +79,7 @@ const MyAppointmentsPage = () => {
     }
     try {
       const user = JSON.parse(localStorage.getItem('user'));
-      await axios.patch(`http://localhost:5000/appointments/${activeAppId}`, { 
+      await axios.patch(`${process.env.REACT_APP_API_URL || ${process.env.REACT_APP_API_URL || 'http://localhost:5000'}'}/appointments/${activeAppId}`, { 
         status: 'cancelled', 
         cancellationReason: cancelReason,
         cancelledBy: 'customer',
@@ -110,7 +110,7 @@ const MyAppointmentsPage = () => {
       return;
     }
     try {
-      await axios.patch(`http://localhost:5000/appointments/${activeAppId}`, { status: 'completed', feedback: feedbackText, stars: feedbackStars });
+      await axios.patch(`${process.env.REACT_APP_API_URL || ${process.env.REACT_APP_API_URL || 'http://localhost:5000'}'}/appointments/${activeAppId}`, { status: 'completed', feedback: feedbackText, stars: feedbackStars });
       setAppointments((prev) => prev.map(app => app.id === activeAppId ? { ...app, status: 'completed', feedback: feedbackText, stars: feedbackStars } : app));
       setShowFeedbackModal(false);
     } catch (err) {

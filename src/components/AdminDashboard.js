@@ -50,7 +50,7 @@ const AdminDashboard = () => {
             'x-auth-token': token,
           },
         };
-        const res = await axios.get('http://localhost:5000/api/staff/appointments', config);
+        const res = await axios.get(${process.env.REACT_APP_API_URL || ${process.env.REACT_APP_API_URL || 'http://localhost:5000'}'}/api/staff/appointments', config);
         setAppointments(res.data);
         setLoading(false);
       } catch (err) {
@@ -99,7 +99,7 @@ const AdminDashboard = () => {
             },
           };
           await axios.put(
-            `http://localhost:5000/api/staff/appointments/${appointmentId}/status`,
+            `${process.env.REACT_APP_API_URL || ${process.env.REACT_APP_API_URL || 'http://localhost:5000'}'}/api/staff/appointments/${appointmentId}/status`,
             { status },
             config
           );
@@ -156,7 +156,7 @@ const AdminDashboard = () => {
             },
           };
           await axios.put(
-            `http://localhost:5000/api/staff/appointments/${activeAppId}/status`,
+            `${process.env.REACT_APP_API_URL || ${process.env.REACT_APP_API_URL || 'http://localhost:5000'}'}/api/staff/appointments/${activeAppId}/status`,
             cancelData,
             config
           );

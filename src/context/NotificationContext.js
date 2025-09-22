@@ -25,8 +25,8 @@ export const NotificationProvider = ({ children }) => {
       try {
         // Fetch both appointments and notification read status
         const [appointmentsRes, notificationsRes] = await Promise.all([
-          axios.get('http://localhost:5000/appointments'),
-          axios.get('http://localhost:5000/notifications')
+          axios.get(${process.env.REACT_APP_API_URL || ${process.env.REACT_APP_API_URL || 'http://localhost:5000'}'}/appointments'),
+          axios.get(${process.env.REACT_APP_API_URL || ${process.env.REACT_APP_API_URL || 'http://localhost:5000'}'}/notifications')
         ]);
         
         const allAppointments = appointmentsRes.data.filter(app => app.id);
@@ -93,17 +93,17 @@ export const NotificationProvider = ({ children }) => {
 
     try {
       // Check if notification read status exists
-      const existingRes = await axios.get(`http://localhost:5000/notifications?userId=${user.id}&notificationId=${notificationId}`);
+      const existingRes = await axios.get(`${process.env.REACT_APP_API_URL || ${process.env.REACT_APP_API_URL || 'http://localhost:5000'}'}/notifications?userId=${user.id}&notificationId=${notificationId}`);
       
       if (existingRes.data.length > 0) {
         // Update existing
-        await axios.patch(`http://localhost:5000/notifications/${existingRes.data[0].id}`, {
+        await axios.patch(`${process.env.REACT_APP_API_URL || ${process.env.REACT_APP_API_URL || 'http://localhost:5000'}'}/notifications/${existingRes.data[0].id}`, {
           isRead: true,
           readAt: new Date().toISOString()
         });
       } else {
         // Create new
-        await axios.post('http://localhost:5000/notifications', {
+        await axios.post(${process.env.REACT_APP_API_URL || ${process.env.REACT_APP_API_URL || 'http://localhost:5000'}'}/notifications', {
           userId: user.id,
           notificationId: notificationId,
           isRead: true,
@@ -133,15 +133,15 @@ export const NotificationProvider = ({ children }) => {
       
       for (const notification of unreadNotifications) {
         try {
-          const existingRes = await axios.get(`http://localhost:5000/notifications?userId=${user.id}&notificationId=${notification.id}`);
+          const existingRes = await axios.get(`${process.env.REACT_APP_API_URL || ${process.env.REACT_APP_API_URL || 'http://localhost:5000'}'}/notifications?userId=${user.id}&notificationId=${notification.id}`);
           
           if (existingRes.data.length > 0) {
-            await axios.patch(`http://localhost:5000/notifications/${existingRes.data[0].id}`, {
+            await axios.patch(`${process.env.REACT_APP_API_URL || ${process.env.REACT_APP_API_URL || 'http://localhost:5000'}'}/notifications/${existingRes.data[0].id}`, {
               isRead: true,
               readAt: new Date().toISOString()
             });
           } else {
-            await axios.post('http://localhost:5000/notifications', {
+            await axios.post(${process.env.REACT_APP_API_URL || ${process.env.REACT_APP_API_URL || 'http://localhost:5000'}'}/notifications', {
               userId: user.id,
               notificationId: notification.id,
               isRead: true,
