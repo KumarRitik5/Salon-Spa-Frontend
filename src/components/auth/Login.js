@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 
 const Login = () => {
 	const [formData, setFormData] = useState({ email: '', password: '' });
 	const [error, setError] = useState('');
-	const [showPassword, setShowPassword] = useState(false);
 	const { login } = useAuth();
 	const navigate = useNavigate();
 
@@ -48,7 +47,7 @@ const Login = () => {
 				}}>
 				<div style={{ textAlign: 'center', marginBottom: 18 }}>
 					  {/* <img src="/favicon.ico" alt="logo" style={{ width: 48, height: 48, borderRadius: 12, marginBottom: 6, boxShadow: '0 2px 8px #ff6b6b22' }} /> */}
-					<h2 style={{ color: '#ff6b6b', margin: 0, fontWeight: 800, fontSize: 28, letterSpacing: 1 }}>Salon & Spa</h2>
+					<h2 style={{ color: '#ff6b6b', margin: 0, fontWeight: 800, fontSize: 28, letterSpacing: 1 }}>✨ Luxe Beauty Salon</h2>
 					<div style={{ color: '#888', fontSize: 15, marginTop: 2 }}>Welcome back! Please login to continue.</div>
 				</div>
 				{error && <div className="error-message">{error}</div>}
@@ -70,7 +69,7 @@ const Login = () => {
 						<label htmlFor="login-password">Password</label>
 						<input
 							id="login-password"
-							type={showPassword ? 'text' : 'password'}
+							type="password"
 							name="password"
 							value={formData.password}
 							onChange={handleChange}
@@ -78,19 +77,13 @@ const Login = () => {
 							style={{ paddingRight: 36 }}
 							aria-label="Password"
 						/>
-						<span
-							onClick={() => setShowPassword((v) => !v)}
-							style={{ position: 'absolute', right: 10, top: 36, cursor: 'pointer', color: '#888', fontSize: 18 }}
-							title={showPassword ? 'Hide password' : 'Show password'}
-							tabIndex={0}
-							role="button"
-							aria-label={showPassword ? 'Hide password' : 'Show password'}
-							onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setShowPassword(v => !v); }}
-						>
-							{showPassword ? '🙈' : '👁️'}
-						</span>
 					</div>
 					<button type="submit" className="auth-button" style={{ fontWeight: 700, fontSize: 17, marginTop: 8 }}>Login</button>
+					<div style={{ marginTop: 12, textAlign: 'center' }}>
+						<Link to="/forgot-password" style={{ color: '#ff6b6b', textDecoration: 'underline', fontSize: 14 }}>
+							Forgot Password?
+						</Link>
+					</div>
 				</form>
 				<div style={{ textAlign: 'center', margin: '1.5rem 0 0.5rem', color: '#aaa', fontSize: 14 }}>or login with</div>
 				<div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 10 }}>
@@ -98,7 +91,7 @@ const Login = () => {
 					<button style={{ background: '#fff', border: '1px solid #eee', borderRadius: 6, padding: '0.4rem 1.2rem', color: '#333', fontWeight: 600, cursor: 'not-allowed', opacity: 0.6 }} disabled>Facebook</button>
 				</div>
 				<div style={{ textAlign: 'center', marginTop: 10, fontSize: 15 }}>
-					Don't have an account? <a href="/register" style={{ color: '#ff6b6b', fontWeight: 600, textDecoration: 'none' }}>Register</a>
+					Don't have an account? <Link to="/register" style={{ color: '#ff6b6b', fontWeight: 600, textDecoration: 'none' }}>Register</Link>
 				</div>
 			</div>
 		</div>

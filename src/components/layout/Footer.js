@@ -43,7 +43,7 @@ const Footer = () => {
       </div>
       
       <div className="footer-bottom">
-        <p>&copy; {new Date().getFullYear()} Salon & Spa. All rights reserved. | Developed by Ritik Kumar</p>
+        <p>&copy; {new Date().getFullYear()} ✨ Luxe Beauty Salon. All rights reserved. | Developed by Ritik Kumar</p>
       </div>
     </footer>
   );

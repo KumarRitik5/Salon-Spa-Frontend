@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import './OwnerDashboard.css';
+
 // Star icon for feedback
 const Star = ({ filled }) => (
-  <span style={{ color: filled ? '#FFD700' : '#ccc', fontSize: '1.2em' }}>★</span>
+  <span className={filled ? 'star-filled' : 'star-empty'}>★</span>
 );
 
 const OwnerDashboard = () => {
@@ -15,6 +17,9 @@ const OwnerDashboard = () => {
   const [editServiceId, setEditServiceId] = useState(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackService, setFeedbackService] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [activeAppId, setActiveAppId] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -28,10 +33,11 @@ const OwnerDashboard = () => {
         axios.get('http://localhost:5000/services'),
         axios.get('http://localhost:5000/users'),
       ]);
-      setAppointments(appsRes.data);
+      setAppointments(appsRes.data.filter(app => app.id).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))); // Filter out empty objects and sort by latest first
       setServices(servRes.data);
       setUsers(usersRes.data);
     } catch (err) {
+      console.error('Failed to load data:', err);
       alert('Failed to load data.');
     }
     setLoading(false);
@@ -95,14 +101,51 @@ const OwnerDashboard = () => {
     }
   };
 
-
   // Owner can confirm or reject (cancel) appointment
   const handleUpdateStatus = async (id, status) => {
+    if (status === 'cancelled') {
+      setActiveAppId(id);
+      setCancelReason('');
+      setShowCancelModal(true);
+      return;
+    }
+    
     try {
-      await axios.patch(`http://localhost:5000/appointments/${id}`, { status });
+      // Add updated timestamp when status changes
+      await axios.patch(`http://localhost:5000/appointments/${id}`, { 
+        status,
+        updatedAt: new Date().toISOString()
+      });
       fetchData();
     } catch {
       alert('Failed to update appointment status.');
+    }
+  };
+
+  const submitCancel = async () => {
+    if (!cancelReason) {
+      alert('Cancellation reason is required.');
+      return;
+    }
+
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    try {
+      await axios.patch(`http://localhost:5000/appointments/${activeAppId}`, {
+        status: 'cancelled',
+        cancellationReason: cancelReason,
+        cancelledBy: 'owner',
+        cancelledByName: user.name || 'Owner/Staff',
+        cancelledAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      setShowCancelModal(false);
+      setCancelReason('');
+      setActiveAppId(null);
+      fetchData();
+      alert('Appointment cancelled successfully!');
+    } catch {
+      alert('Failed to cancel appointment.');
     }
   };
 
@@ -119,161 +162,226 @@ const OwnerDashboard = () => {
     return appointments.filter(app => app.serviceId === serviceId && app.feedback);
   };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '2rem' }}>Loading...</div>;
+  if (loading) return <div className="loading">Loading...</div>;
 
   return (
-    <div style={{ maxWidth: 1100, margin: '2rem auto', padding: '2rem', background: '#fffbe6', borderRadius: 16, boxShadow: '0 2px 16px #ffecb366' }}>
-      <h2 style={{ textAlign: 'center', color: '#ff6b6b', marginBottom: 32 }}>Owner Dashboard</h2>
-      <h3 style={{ color: '#333', marginBottom: 16 }}>All Appointments</h3>
-      <div style={{ marginBottom: 24, background: '#f7f7f7', borderRadius: 8, padding: 16, boxShadow: '0 1px 6px #ffecb322' }}>
-        <h4 style={{ margin: 0, color: '#ff6b6b' }}>Service Ratings & Feedback</h4>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18, marginTop: 10 }}>
+    <div className="owner-dashboard">
+      <h2>Owner Dashboard</h2>
+      
+      <h3>All Appointments</h3>
+      
+      {/* Service Ratings Section */}
+      <div className="service-ratings-section">
+        <h4>Service Ratings & Feedback</h4>
+        <div className="service-ratings-grid">
           {services.map(service => {
             const avg = getServiceRating(service.id || service._id);
             const feedbacks = getServiceFeedbacks(service.id || service._id);
             return (
-              <div key={service.id || service._id} style={{ background: '#fff', borderRadius: 8, boxShadow: '0 1px 4px #ffecb322', padding: 12, minWidth: 180 }}>
-                <div style={{ fontWeight: 600 }}>{service.name}</div>
-                <div style={{ margin: '4px 0' }}>
+              <div key={service.id || service._id} className="service-rating-card">
+                <div className="service-name">{service.name}</div>
+                <div className="rating-info">
                   <span style={{ fontWeight: 500 }}>Avg Rating: </span>
                   {avg ? (
-                    <span style={{ color: '#FFD700', fontWeight: 700 }}>{avg} / 5</span>
+                    <span className="rating-value">{avg} / 5</span>
                   ) : (
-                    <span style={{ color: '#aaa' }}>No ratings</span>
+                    <span className="no-ratings">No ratings</span>
                   )}
                 </div>
-                <button onClick={() => { setFeedbackService(service); setShowFeedbackModal(true); }} style={{ background: '#1976d2', color: 'white', border: 'none', borderRadius: 6, padding: '0.3rem 0.8rem', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>View Feedbacks</button>
+                <button 
+                  onClick={() => { setFeedbackService(service); setShowFeedbackModal(true); }} 
+                  className="view-feedbacks-btn"
+                >
+                  View Feedbacks
+                </button>
               </div>
             );
           })}
         </div>
       </div>
-      <div style={{ overflowX: 'auto', marginBottom: 32 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', background: 'white', borderRadius: 8 }}>
+
+      {/* Appointments Table */}
+      <div className="appointments-table-container">
+        <table className="appointments-table">
           <thead>
-            <tr style={{ background: '#ffe5e5' }}>
-              <th style={{ padding: 10 }}>Customer</th>
+            <tr>
+              <th>Customer</th>
               <th>Service</th>
               <th>Date</th>
               <th>Slot</th>
+              <th>Price</th>
               <th>Status</th>
+              <th>Cancellation Info</th>
               <th>Actions</th>
               <th>Feedback</th>
             </tr>
           </thead>
           <tbody>
             {appointments.length === 0 ? (
-              <tr><td colSpan={6} style={{ textAlign: 'center', padding: 20 }}>No appointments found.</td></tr>
+              <tr><td colSpan={9} style={{ textAlign: 'center', padding: 20 }}>No appointments found.</td></tr>
             ) : (
-              appointments.map((app) => {
-                const statusColor = app.status === 'cancelled' ? '#ff3333' : app.status === 'completed' ? '#00875a' : app.status === 'confirmed' ? '#1976d2' : '#ffb300';
+              appointments.map((app, index) => {
+                const user = users.find(u => u.id === app.userId);
+                const isLatest = index === 0;
+                
                 return (
-                  <tr key={app.id || app._id}>
-                    <td style={{ padding: 8 }}>
-                      {(() => {
-                        const user = users.find(u => u.id === app.userId);
-                        return user ? user.name : app.userId;
-                      })()}
+                  <tr key={app.id || app._id} className={isLatest ? 'latest-appointment' : ''}>
+                    <td style={{ position: 'relative' }}>
+                      {isLatest && (
+                        <span className="new-badge">NEW</span>
+                      )}
+                      {user ? user.name : `Unknown User (${app.userId})`}
                     </td>
                     <td>{app.serviceName}</td>
                     <td>{app.date}</td>
                     <td>{app.slot}</td>
+                    <td>₹{app.price}</td>
                     <td>
-                      <span style={{
-                        background: statusColor + '22',
-                        color: statusColor,
-                        fontWeight: 700,
-                        borderRadius: 6,
-                        padding: '0.3em 0.8em',
-                        fontSize: '1em',
-                        textTransform: 'capitalize',
-                        letterSpacing: 1
-                      }}>{app.status}</span>
+                      <span className={`status-badge status-${app.status}`}>
+                        {app.status}
+                      </span>
+                    </td>
+                    <td>
+                      {app.status === 'cancelled' && (
+                        <div style={{ fontSize: '0.85rem' }}>
+                          {app.cancellationReason && (
+                            <div><strong>Reason:</strong> {app.cancellationReason}</div>
+                          )}
+                          {app.cancelledBy && (
+                            <div><strong>Cancelled by:</strong> {app.cancelledBy === 'customer' ? 'Customer' : 'Owner/Staff'}</div>
+                          )}
+                          {app.cancelledAt && (
+                            <div><strong>When:</strong> {new Date(app.cancelledAt).toLocaleDateString()}</div>
+                          )}
+                        </div>
+                      )}
+                      {app.status !== 'cancelled' && '-'}
                     </td>
                     <td>
                       {app.status === 'pending' && (
-                        <>
+                        <div className="action-buttons">
                           <button
                             onClick={() => handleUpdateStatus(app.id || app._id, 'confirmed')}
-                            style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: 6, padding: '0.4rem 1rem', fontWeight: 600, cursor: 'pointer', marginRight: 8 }}
+                            className="btn-confirm"
                           >Confirm</button>
                           <button
                             onClick={() => handleUpdateStatus(app.id || app._id, 'cancelled')}
-                            style={{ background: '#ff3333', color: 'white', border: 'none', borderRadius: 6, padding: '0.4rem 1rem', fontWeight: 600, cursor: 'pointer' }}
-                          >Reject</button>
-                        </>
+                            className="btn-cancel"
+                          >Cancel</button>
+                        </div>
                       )}
                       {app.status === 'confirmed' && (
-                        <button
-                          onClick={() => handleUpdateStatus(app.id || app._id, 'completed')}
-                          style={{ background: '#1976d2', color: 'white', border: 'none', borderRadius: 6, padding: '0.4rem 1rem', fontWeight: 600, cursor: 'pointer' }}
-                        >Mark as Completed</button>
+                        <div className="action-buttons">
+                          <button
+                            onClick={() => handleUpdateStatus(app.id || app._id, 'completed')}
+                            className="btn-complete"
+                          >Complete</button>
+                          <button
+                            onClick={() => handleUpdateStatus(app.id || app._id, 'cancelled')}
+                            className="btn-cancel"
+                          >Cancel</button>
+                        </div>
+                      )}
+                      {(app.status === 'cancelled' || app.status === 'completed') && (
+                        <span className="no-actions">No actions</span>
                       )}
                     </td>
                     <td>
                       {app.stars && (
-                        <span>{[...Array(5)].map((_, i) => <Star key={i} filled={i < app.stars} />)}</span>
+                        <div>{[...Array(5)].map((_, i) => <Star key={i} filled={i < app.stars} />)}</div>
                       )}
                       {app.feedback && (
-                        <div style={{ fontSize: 13, color: '#555', marginTop: 2 }}>{app.feedback}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{app.feedback}</div>
                       )}
+                      {!app.stars && !app.feedback && '-'}
                     </td>
                   </tr>
                 );
-      {/* Feedback Modal for Service */}
-      {showFeedbackModal && feedbackService && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#0008', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'white', borderRadius: 12, padding: '2rem', minWidth: 320, maxWidth: 500, boxShadow: '0 4px 32px #0002', textAlign: 'center' }}>
-            <h2 style={{ color: '#ff6b6b', marginBottom: 16 }}>Feedback for {feedbackService.name}</h2>
-            <div style={{ maxHeight: 300, overflowY: 'auto', marginBottom: 16 }}>
-              {getServiceFeedbacks(feedbackService.id || feedbackService._id).length === 0 ? (
-                <div style={{ color: '#aaa' }}>No feedbacks yet.</div>
-              ) : (
-                getServiceFeedbacks(feedbackService.id || feedbackService._id).map((fb, idx) => (
-                  <div key={idx} style={{ borderBottom: '1px solid #eee', marginBottom: 10, paddingBottom: 8, textAlign: 'left' }}>
-                    <div style={{ fontWeight: 500, marginBottom: 2 }}>{users.find(u => u.id === fb.userId)?.name || fb.userId}</div>
-                    <div style={{ marginBottom: 2 }}>{[...Array(5)].map((_, i) => <Star key={i} filled={i < (fb.stars || 0)} />)}</div>
-                    <div style={{ color: '#555' }}>{fb.feedback}</div>
-                  </div>
-                ))
-              )}
-            </div>
-            <button onClick={() => { setShowFeedbackModal(false); setFeedbackService(null); }} style={{ background: '#eee', color: '#333', border: 'none', borderRadius: 6, padding: '0.5rem 1.5rem', fontWeight: 600, cursor: 'pointer' }}>Close</button>
-          </div>
-        </div>
-      )}
               })
             )}
           </tbody>
         </table>
       </div>
-      <h3 style={{ color: '#333', marginBottom: 16 }}>Manage Services</h3>
-      <button onClick={() => { setShowServiceForm(true); setEditServiceId(null); setServiceForm({ name: '', price: '', duration: '', description: '' }); }} style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: 6, padding: '0.5rem 1.2rem', fontWeight: 600, cursor: 'pointer', marginBottom: 16 }}>Add New Service</button>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
+
+      {/* Services Management Section */}
+      <h3>Manage Services</h3>
+      <button 
+        onClick={() => { setShowServiceForm(true); setEditServiceId(null); setServiceForm({ name: '', price: '', duration: '', description: '' }); }} 
+        className="add-service-btn"
+      >
+        Add New Service
+      </button>
+      <div className="services-grid">
         {services.map(service => (
-          <div key={service.id || service._id} style={{ background: 'white', borderRadius: 10, boxShadow: '0 2px 8px #ffecb366', padding: 18, marginBottom: 10 }}>
-            <h4 style={{ color: '#ff6b6b', marginBottom: 8 }}>{service.name}</h4>
-            <div style={{ color: '#666', marginBottom: 8 }}>{service.description}</div>
-            <div style={{ marginBottom: 8 }}>Price: <b>₹{service.price}</b></div>
-            <div style={{ marginBottom: 8 }}>Duration: {service.duration} min</div>
-            <button onClick={() => handleEditService(service)} style={{ background: '#ffb300', color: 'white', border: 'none', borderRadius: 6, padding: '0.4rem 1rem', fontWeight: 600, cursor: 'pointer', marginRight: 8 }}>Edit</button>
-            <button onClick={() => handleDeleteService(service.id || service._id)} style={{ background: '#ff3333', color: 'white', border: 'none', borderRadius: 6, padding: '0.4rem 1rem', fontWeight: 600, cursor: 'pointer' }}>Delete</button>
+          <div key={service.id || service._id} className="service-card">
+            <h4>{service.name}</h4>
+            <div className="service-description">{service.description}</div>
+            <div className="service-price">Price: <b>₹{service.price}</b></div>
+            <div className="service-duration">Duration: {service.duration} min</div>
+            <button onClick={() => handleEditService(service)} className="btn-edit">Edit</button>
+            <button onClick={() => handleDeleteService(service.id || service._id)} className="btn-delete">Delete</button>
           </div>
         ))}
       </div>
+
+      {/* Cancel Modal */}
+      {showCancelModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3 className="modal-title">Cancel Appointment</h3>
+            <p className="modal-text">Please provide a reason for cancelling this appointment:</p>
+            <textarea
+              rows={4}
+              className="modal-textarea"
+              placeholder="Enter cancellation reason..."
+              value={cancelReason}
+              onChange={e => setCancelReason(e.target.value)}
+            />
+            <div className="modal-buttons">
+              <button onClick={submitCancel} className="btn-cancel">Cancel Appointment</button>
+              <button onClick={() => setShowCancelModal(false)} className="btn-secondary">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Service Form Modal */}
       {showServiceForm && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#0008', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <form onSubmit={editServiceId ? handleUpdateService : handleAddService} style={{ background: 'white', borderRadius: 12, padding: '2rem', minWidth: 320, boxShadow: '0 4px 32px #0002', textAlign: 'center' }}>
-            <h2 style={{ color: '#ff6b6b', marginBottom: 16 }}>{editServiceId ? 'Edit Service' : 'Add New Service'}</h2>
-            <input name="name" value={serviceForm.name} onChange={handleServiceFormChange} placeholder="Service Name" required style={{ width: '100%', marginBottom: 12, padding: 8, borderRadius: 6, border: '1px solid #ddd' }} />
-            <input name="price" value={serviceForm.price} onChange={handleServiceFormChange} placeholder="Price" type="number" min="0" required style={{ width: '100%', marginBottom: 12, padding: 8, borderRadius: 6, border: '1px solid #ddd' }} />
-            <input name="duration" value={serviceForm.duration} onChange={handleServiceFormChange} placeholder="Duration (min)" type="number" min="1" required style={{ width: '100%', marginBottom: 12, padding: 8, borderRadius: 6, border: '1px solid #ddd' }} />
-            <textarea name="description" value={serviceForm.description} onChange={handleServiceFormChange} placeholder="Description" rows={3} style={{ width: '100%', marginBottom: 16, padding: 8, borderRadius: 6, border: '1px solid #ddd' }} />
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-              <button type="submit" style={{ background: '#4CAF50', color: 'white', border: 'none', borderRadius: 6, padding: '0.5rem 1.5rem', fontWeight: 600, cursor: 'pointer' }}>{editServiceId ? 'Update' : 'Add'}</button>
-              <button type="button" onClick={() => { setShowServiceForm(false); setEditServiceId(null); }} style={{ background: '#eee', color: '#333', border: 'none', borderRadius: 6, padding: '0.5rem 1.5rem', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+        <div className="modal-overlay">
+          <form onSubmit={editServiceId ? handleUpdateService : handleAddService} className="modal-form">
+            <h2 className="modal-title">{editServiceId ? 'Edit Service' : 'Add New Service'}</h2>
+            <input name="name" value={serviceForm.name} onChange={handleServiceFormChange} placeholder="Service Name" required />
+            <input name="price" value={serviceForm.price} onChange={handleServiceFormChange} placeholder="Price" type="number" min="0" required />
+            <input name="duration" value={serviceForm.duration} onChange={handleServiceFormChange} placeholder="Duration (min)" type="number" min="1" required />
+            <textarea name="description" value={serviceForm.description} onChange={handleServiceFormChange} placeholder="Description" rows={3} />
+            <div className="modal-buttons">
+              <button type="submit" className="btn-primary">{editServiceId ? 'Update' : 'Add'}</button>
+              <button type="button" onClick={() => { setShowServiceForm(false); setEditServiceId(null); }} className="btn-secondary">Cancel</button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Feedback Modal for Service */}
+      {showFeedbackModal && feedbackService && (
+        <div className="modal-overlay">
+          <div className="feedback-modal">
+            <h2 className="modal-title">Feedback for {feedbackService.name}</h2>
+            <div className="feedback-list">
+              {getServiceFeedbacks(feedbackService.id || feedbackService._id).length === 0 ? (
+                <div className="no-feedback">No feedbacks yet.</div>
+              ) : (
+                getServiceFeedbacks(feedbackService.id || feedbackService._id).map((fb, idx) => (
+                  <div key={idx} className="feedback-item">
+                    <div className="feedback-user">{users.find(u => u.id === fb.userId)?.name || fb.userId}</div>
+                    <div className="feedback-stars">{[...Array(5)].map((_, i) => <Star key={i} filled={i < (fb.stars || 0)} />)}</div>
+                    <div className="feedback-text">{fb.feedback}</div>
+                  </div>
+                ))
+              )}
+            </div>
+            <button onClick={() => { setShowFeedbackModal(false); setFeedbackService(null); }} className="btn-secondary">Close</button>
+          </div>
         </div>
       )}
     </div>

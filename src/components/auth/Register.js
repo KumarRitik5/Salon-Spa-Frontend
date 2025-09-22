@@ -13,25 +13,70 @@ const Register = () => {
 		role: 'user',
 	});
 	const [error, setError] = useState('');
-	const [showPassword, setShowPassword] = useState(false);
-	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 	const { register } = useAuth();
 	const navigate = useNavigate();
 
 	const handleChange = (e) => {
-		setFormData({ ...formData, [e.target.name]: e.target.value });
+		const { name, value } = e.target;
+		
+		// Validate name field to only allow letters and spaces
+		if (name === 'name') {
+			// Only allow letters and spaces, reject any numbers
+			if (!/^[a-zA-Z\s]*$/.test(value)) {
+				return; // Don't update if it contains numbers or special characters
+			}
+		}
+		
+		// Validate phone field to only allow numbers and max 10 digits
+		if (name === 'phone') {
+			// Only allow numbers and limit to 10 digits
+			if (!/^\d*$/.test(value) || value.length > 10) {
+				return; // Don't update if it contains non-numbers or exceeds 10 digits
+			}
+		}
+		
+		setFormData({ ...formData, [name]: value });
 	};
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setError('');
+		
+		// Validate name field
+		if (!formData.name.trim()) {
+			setError('Name is required');
+			return;
+		}
+		
+		if (!/^[a-zA-Z\s]+$/.test(formData.name.trim())) {
+			setError('Name can only contain letters and spaces (no numbers allowed)');
+			return;
+		}
+		
+		if (formData.name.trim().length < 2) {
+			setError('Name must be at least 2 characters long');
+			return;
+		}
+		
+		// Validate phone number
+		if (!formData.phone.trim()) {
+			setError('Phone number is required');
+			return;
+		}
+		
+		if (!/^\d{10}$/.test(formData.phone.trim())) {
+			setError('Phone number must be exactly 10 digits (numbers only)');
+			return;
+		}
+		
 		if (formData.password !== formData.confirmPassword) {
 			setError('Passwords do not match');
 			return;
 		}
+		
 		try {
 			const userData = {
-				name: formData.name,
+				name: formData.name.trim(),
 				email: formData.email,
 				password: formData.password,
 				phone: formData.phone,
@@ -67,7 +112,7 @@ const Register = () => {
 				}}>
 			<div style={{ textAlign: 'center', marginBottom: 32 }}>
 					  {/* <img src="/favicon.ico" alt="logo" style={{ width: 48, height: 48, borderRadius: 12, marginBottom: 6, boxShadow: '0 2px 8px #ff6b6b22' }} /> */}
-					<h2 style={{ color: '#ff6b6b', margin: 0, fontWeight: 800, fontSize: 28, letterSpacing: 1 }}>Salon & Spa</h2>
+					<h2 style={{ color: '#ff6b6b', margin: 0, fontWeight: 800, fontSize: 28, letterSpacing: 1 }}>✨ Luxe Beauty Salon</h2>
 					<div style={{ color: '#888', fontSize: 15, marginTop: 2 }}>Create your account to get started.</div>
 				</div>
 				{error && <div className="error-message">{error}</div>}
@@ -83,6 +128,10 @@ const Register = () => {
 							required
 							autoFocus
 							aria-label="Name"
+							pattern="[a-zA-Z\s]+"
+							title="Name can only contain letters and spaces"
+							minLength="2"
+							maxLength="50"
 						/>
 					</div>
 					<div className="form-group">
@@ -107,55 +156,35 @@ const Register = () => {
 							onChange={handleChange}
 							required
 							aria-label="Phone"
+							pattern="[0-9]{10}"
+							title="Phone number must be exactly 10 digits"
+							maxLength="10"
+							placeholder="1234567890"
 						/>
 					</div>
 					<div className="form-group" style={{ position: 'relative' }}>
 						<label htmlFor="register-password">Password</label>
 						<input
 							id="register-password"
-							type={showPassword ? 'text' : 'password'}
+							type="password"
 							name="password"
 							value={formData.password}
 							onChange={handleChange}
 							required
-							style={{ paddingRight: 36 }}
 							aria-label="Password"
 						/>
-						<span
-							onClick={() => setShowPassword((v) => !v)}
-							style={{ position: 'absolute', right: 10, top: 36, cursor: 'pointer', color: '#888', fontSize: 18 }}
-							title={showPassword ? 'Hide password' : 'Show password'}
-							tabIndex={0}
-							role="button"
-							aria-label={showPassword ? 'Hide password' : 'Show password'}
-							onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setShowPassword(v => !v); }}
-						>
-							{showPassword ? '🙈' : '👁️'}
-						</span>
 					</div>
 					<div className="form-group" style={{ position: 'relative' }}>
 						<label htmlFor="register-confirm-password">Confirm Password</label>
 						<input
 							id="register-confirm-password"
-							type={showConfirmPassword ? 'text' : 'password'}
+							type="password"
 							name="confirmPassword"
 							value={formData.confirmPassword}
 							onChange={handleChange}
 							required
-							style={{ paddingRight: 36 }}
 							aria-label="Confirm Password"
 						/>
-						<span
-							onClick={() => setShowConfirmPassword((v) => !v)}
-							style={{ position: 'absolute', right: 10, top: 36, cursor: 'pointer', color: '#888', fontSize: 18 }}
-							title={showConfirmPassword ? 'Hide password' : 'Show password'}
-							tabIndex={0}
-							role="button"
-							aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-							onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setShowConfirmPassword(v => !v); }}
-						>
-							{showConfirmPassword ? '🙈' : '👁️'}
-						</span>
 					</div>
 					<div className="form-group">
 						<label htmlFor="register-role">Account Type</label>
